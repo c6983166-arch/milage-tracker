@@ -36,11 +36,11 @@ jobs:
         run: gradle --no-daemon :app:assembleDebug
 
       - name: Rename APK
-        run: cp app/build/outputs/apk/debug/app-debug.apk Bailey_Anns_Mileage_Tracker_v1.0.apk
+        run: cp app/build/outputs/apk/debug/app-debug.apk Bailey_Anns_Mileage_Tracker_v1.1.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v7
         with:
-          name: Bailey_Anns_Mileage_Tracker_v1.0_APK
-          path: Bailey_Anns_Mileage_Tracker_v1.0.apk
+          name: Bailey_Anns_Mileage_Tracker_v1.1_APK
+          path: Bailey_Anns_Mileage_Tracker_v1.1.apk
           if-no-files-found: error
