@@ -61,14 +61,11 @@ jobs:
       - name: Render approved Miles Tracker icon
         shell: bash
         run: |
-          if command -v magick >/dev/null 2>&1; then
-            magick -background none premium_icon.svg -resize 512x512 app/src/main/res/drawable-nodpi/miles_tracker_icon.webp
-          elif command -v convert >/dev/null 2>&1; then
-            convert -background none premium_icon.svg -resize 512x512 app/src/main/res/drawable-nodpi/miles_tracker_icon.webp
-          else
-            echo "ImageMagick is not available on this runner."
-            exit 1
-          fi
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq librsvg2-bin
+          rm -f app/src/main/res/drawable-nodpi/miles_tracker_icon.webp
+          rsvg-convert -w 512 -h 512 premium_icon.svg -o app/src/main/res/drawable-nodpi/miles_tracker_icon.png
+          test -s app/src/main/res/drawable-nodpi/miles_tracker_icon.png
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v4
