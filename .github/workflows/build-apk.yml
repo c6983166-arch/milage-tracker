@@ -42,7 +42,7 @@ jobs:
                   '    private final Runnable refresh=()->{ if(root!=null && root.getTag()!=null && "dashboard".equals(root.getTag())) showDashboard(); };\n',
                   '    private final int NAVY=Color.rgb(6,26,67),GOLD=Color.rgb(217,140,0),BG=Color.BLACK,CARD=Color.rgb(6,26,67),MUTED=Color.rgb(205,211,222);\n'
                   '    private LinearLayout root; private DatabaseHelper db; private Handler handler=new Handler(Looper.getMainLooper()); private TextView activeMilesView;\n'
-                  '    private final Runnable refresh=()->{ if(root!=null && root.getTag()!=null && "dashboard".equals(root.getTag())){ DatabaseHelper.Trip t=db.activeTrip(); if(t!=null && activeMilesView!=null)activeMilesView.setText(String.format(Locale.US,"%.1f miles",t.miles)); handler.postDelayed(refresh,1200); } };\n'
+                  '    private final Runnable refresh=new Runnable(){ @Override public void run(){ if(root!=null && root.getTag()!=null && "dashboard".equals(root.getTag())){ DatabaseHelper.Trip t=db.activeTrip(); if(t!=null && activeMilesView!=null)activeMilesView.setText(String.format(Locale.US,"%.1f miles",t.miles)); handler.postDelayed(this,1200); } } };\n'
               ),
               (
                   '@Override public void onCreate(Bundle b){super.onCreate(b);db=new DatabaseHelper(this);showDashboard();handleAction(getIntent());}',
