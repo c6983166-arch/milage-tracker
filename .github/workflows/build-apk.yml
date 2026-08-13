@@ -16,101 +16,59 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v6
 
-      - name: Restore stable app signing key
-        uses: actions/cache@v4
-        with:
-          path: ~/.android/debug.keystore
-          key: bailey-anns-mileage-debug-key-v1
-
-      - name: Apply premium dark branding
-        shell: bash
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-
-          p = Path('app/src/main/java/com/baileyanns/mileage/MainActivity.java')
-          s = p.read_text()
-
-          changes = [
-              (
-                  'import android.content.pm.PackageManager;\n',
-                  'import android.content.pm.PackageManager;\nimport android.content.res.ColorStateList;\n'
-              ),
-              (
-                  '    private final int NAVY=Color.rgb(6,26,67),GOLD=Color.rgb(217,140,0),BG=Color.rgb(245,247,251);\n'
-                  '    private LinearLayout root; private DatabaseHelper db; private Handler handler=new Handler(Looper.getMainLooper());\n'
-                  '    private final Runnable refresh=()->{ if(root!=null && root.getTag()!=null && "dashboard".equals(root.getTag())) showDashboard(); };\n',
-                  '    private final int NAVY=Color.rgb(6,26,67),GOLD=Color.rgb(217,140,0),BG=Color.BLACK,CARD=Color.rgb(6,26,67),MUTED=Color.rgb(205,211,222);\n'
-                  '    private LinearLayout root; private DatabaseHelper db; private Handler handler=new Handler(Looper.getMainLooper()); private TextView activeMilesView;\n'
-                  '    private final Runnable refresh=new Runnable(){ @Override public void run(){ if(root!=null && root.getTag()!=null && "dashboard".equals(root.getTag())){ DatabaseHelper.Trip t=db.activeTrip(); if(t!=null && activeMilesView!=null)activeMilesView.setText(String.format(Locale.US,"%.1f miles",t.miles)); handler.postDelayed(this,1200); } } };\n'
-              ),
-              (
-                  '@Override public void onCreate(Bundle b){super.onCreate(b);db=new DatabaseHelper(this);showDashboard();handleAction(getIntent());}',
-                  '@Override public void onCreate(Bundle b){super.onCreate(b);getWindow().setStatusBarColor(BG);getWindow().setNavigationBarColor(BG);db=new DatabaseHelper(this);showDashboard();handleAction(getIntent());}'
-              ),
-              (
-                  '        ScrollView sc=new ScrollView(this);root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setPadding(dp(18),dp(16),dp(18),dp(28));root.setBackgroundColor(BG);root.setTag(tag);sc.addView(root);setContentView(sc);\n'
-                  '        ImageView logo=new ImageView(this);logo.setImageResource(com.baileyanns.mileage.R.drawable.ba1_logo);logo.setScaleType(ImageView.ScaleType.CENTER_INSIDE);root.addView(logo,new LinearLayout.LayoutParams(-1,dp(105))); TextView t=text(title,24,NAVY,true);t.setPadding(0,dp(8),0,dp(14));root.addView(t);',
-                  '        ScrollView sc=new ScrollView(this);sc.setFillViewport(true);sc.setClipToPadding(false);sc.setBackgroundColor(BG);root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setPadding(dp(18),dp(16),dp(18),dp(120));root.setBackgroundColor(BG);root.setTag(tag);sc.addView(root);setContentView(sc);\n'
-                  '        ImageView logo=new ImageView(this);logo.setImageResource(com.baileyanns.mileage.R.drawable.ba1_logo);logo.setScaleType(ImageView.ScaleType.CENTER_INSIDE);logo.setPadding(dp(8),dp(8),dp(8),dp(8));android.graphics.drawable.GradientDrawable lg=new android.graphics.drawable.GradientDrawable();lg.setColor(Color.WHITE);lg.setCornerRadius(dp(12));lg.setStroke(dp(1),GOLD);logo.setBackground(lg);root.addView(logo,new LinearLayout.LayoutParams(-1,dp(112))); TextView t=text(title,24,Color.WHITE,true);t.setPadding(0,dp(12),0,dp(14));root.addView(t);'
-              ),
-              (
-                  '            card.addView(text(String.format(Locale.US,"%.1f miles",active.miles),34,NAVY,true));',
-                  '            activeMilesView=text(String.format(Locale.US,"%.1f miles",active.miles),34,Color.WHITE,true);card.addView(activeMilesView);'
-              ),
-              (
-                  '        } else {\n            root.addView(button("START ESTATE MILES"',
-                  '        } else {\n            activeMilesView=null;\n            root.addView(button("START ESTATE MILES"'
-              ),
-              (
-                  'EditText year=new EditText(this);year.setInputType(2);year.setText(String.valueOf(Calendar.getInstance().get(Calendar.YEAR)));',
-                  'EditText year=new EditText(this);year.setInputType(2);year.setText(String.valueOf(Calendar.getInstance().get(Calendar.YEAR)));styleField(year);'
-              ),
-              (
-                  'EditText code=new EditText(this);code.setHint("6-digit pairing code shown in Business Manager");code.setInputType(2);code.setText(Prefs.pairingCode(this));',
-                  'EditText code=new EditText(this);code.setHint("6-digit pairing code shown in Business Manager");code.setInputType(2);code.setText(Prefs.pairingCode(this));styleField(code);'
-              ),
-              (
-                  'Switch sw=new Switch(this);sw.setText("Enable car connection reminder");',
-                  'Switch sw=new Switch(this);sw.setText("Enable car connection reminder");sw.setTextColor(Color.WHITE);'
-              ),
-              (
-                  '    private LinearLayout card(){LinearLayout c=new LinearLayout(this);c.setOrientation(LinearLayout.VERTICAL);c.setPadding(dp(16),dp(16),dp(16),dp(16));android.graphics.drawable.GradientDrawable g=new android.graphics.drawable.GradientDrawable();g.setColor(Color.WHITE);g.setCornerRadius(dp(12));g.setStroke(dp(1),Color.rgb(220,226,235));c.setBackground(g);return c;}',
-                  '    private LinearLayout card(){LinearLayout c=new LinearLayout(this);c.setOrientation(LinearLayout.VERTICAL);c.setPadding(dp(16),dp(16),dp(16),dp(16));android.graphics.drawable.GradientDrawable g=new android.graphics.drawable.GradientDrawable();g.setColor(CARD);g.setCornerRadius(dp(12));g.setStroke(dp(1),GOLD);c.setBackground(g);return c;}'
-              ),
-              (
-                  '    private Button button(String s,View.OnClickListener l,boolean primary){Button b=new Button(this);b.setText(s);b.setAllCaps(false);b.setTextSize(16);b.setTextColor(primary?Color.WHITE:NAVY);android.graphics.drawable.GradientDrawable g=new android.graphics.drawable.GradientDrawable();g.setColor(primary?NAVY:Color.WHITE);g.setStroke(dp(2),primary?NAVY:GOLD);g.setCornerRadius(dp(10));b.setBackground(g);b.setPadding(dp(12),dp(12),dp(12),dp(12));b.setOnClickListener(l);return b;}',
-                  '    private Button button(String s,View.OnClickListener l,boolean primary){Button b=new Button(this);b.setText(s);b.setAllCaps(false);b.setTextSize(16);b.setTextColor(primary?Color.BLACK:GOLD);android.graphics.drawable.GradientDrawable g=new android.graphics.drawable.GradientDrawable();g.setColor(primary?GOLD:NAVY);g.setStroke(dp(1),GOLD);g.setCornerRadius(dp(10));b.setBackground(g);b.setPadding(dp(12),dp(12),dp(12),dp(12));b.setOnClickListener(l);return b;}'
-              ),
-              (
-                  '    private double number(String s){try{return Math.max(0,Double.parseDouble(s.trim()));}catch(Exception e){return 0;}}\n}',
-                  '    private void styleField(EditText e){e.setTextColor(Color.WHITE);e.setHintTextColor(MUTED);if(Build.VERSION.SDK_INT>=21)e.setBackgroundTintList(ColorStateList.valueOf(GOLD));}\n'
-                  '    private double number(String s){try{return Math.max(0,Double.parseDouble(s.trim()));}catch(Exception e){return 0;}}\n}'
-              ),
-          ]
-
-          for old, new in changes:
-              if old not in s:
-                  raise SystemExit('Expected branding source was not found: ' + old[:80])
-              s = s.replace(old, new, 1)
-
-          s = s.replace(',NAVY,true)', ',Color.WHITE,true)')
-          s = s.replace(',NAVY,false)', ',Color.WHITE,false)')
-          s = s.replace('Color.DKGRAY', 'MUTED')
-          p.write_text(s)
-
-          g = Path('app/build.gradle')
-          gs = g.read_text()
-          gs = gs.replace('versionCode 3', 'versionCode 4', 1)
-          gs = gs.replace("versionName '1.2'", "versionName '1.3'", 1)
-          g.write_text(gs)
-          PY
-
       - name: Set up Java 17
         uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
+
+      - name: Restore stable signing folder
+        uses: actions/cache@v4
+        with:
+          path: ~/.android
+          key: bailey-anns-mileage-signing-v14
+
+      - name: Ensure stable debug signing key
+        shell: bash
+        run: |
+          mkdir -p "$HOME/.android"
+          if [ ! -f "$HOME/.android/debug.keystore" ]; then
+            keytool -genkeypair -v \
+              -keystore "$HOME/.android/debug.keystore" \
+              -storepass android -keypass android \
+              -alias androiddebugkey \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -dname "CN=Android Debug,O=Android,C=US"
+          fi
+
+      - name: Apply approved premium layout
+        shell: bash
+        run: |
+          python3 premium_patch.py
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('app/build.gradle')
+          s=p.read_text()
+          s=s.replace("applicationId 'com.baileyanns.mileage.v13'","applicationId 'com.baileyanns.mileage.v14'")
+          s=s.replace('versionCode 3','versionCode 5')
+          s=s.replace("versionName '1.2'","versionName '1.4'")
+          p.write_text(s)
+          x=Path('app/src/main/res/values/strings.xml')
+          t=x.read_text().replace("Bailey Ann\\'s Mileage Tracker v1.3","Bailey Ann\\'s Miles Tracker v1.4")
+          x.write_text(t)
+          PY
+
+      - name: Render approved Miles Tracker icon
+        shell: bash
+        run: |
+          if command -v magick >/dev/null 2>&1; then
+            magick -background none premium_icon.svg -resize 512x512 app/src/main/res/drawable-nodpi/miles_tracker_icon.webp
+          elif command -v convert >/dev/null 2>&1; then
+            convert -background none premium_icon.svg -resize 512x512 app/src/main/res/drawable-nodpi/miles_tracker_icon.webp
+          else
+            echo "ImageMagick is not available on this runner."
+            exit 1
+          fi
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v4
@@ -126,11 +84,11 @@ jobs:
         run: gradle --no-daemon :app:assembleDebug
 
       - name: Rename APK
-        run: cp app/build/outputs/apk/debug/app-debug.apk Bailey_Anns_Mileage_Tracker_v1.3_PREMIUM_DARK.apk
+        run: cp app/build/outputs/apk/debug/app-debug.apk Bailey_Anns_Miles_Tracker_v1.4_OPTION_3.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v7
         with:
-          name: Bailey_Anns_Mileage_Tracker_v1.3_PREMIUM_DARK
-          path: Bailey_Anns_Mileage_Tracker_v1.3_PREMIUM_DARK.apk
+          name: Bailey_Anns_Miles_Tracker_v1.4_OPTION_3
+          path: Bailey_Anns_Miles_Tracker_v1.4_OPTION_3.apk
           if-no-files-found: error
