@@ -22,7 +22,7 @@ jobs:
           path: ~/.android/debug.keystore
           key: bailey-anns-mileage-debug-key-v1
 
-      - name: Apply scrolling fix
+      - name: Apply premium dark branding
         shell: bash
         run: |
           python3 - <<'PY'
@@ -32,23 +32,78 @@ jobs:
           s = p.read_text()
 
           changes = [
-              ('    private final Runnable refresh=()->{ if(root!=null && root.getTag()!=null && "dashboard".equals(root.getTag())) showDashboard(); };\n', ''),
-              ('    @Override protected void onResume(){super.onResume();handler.postDelayed(refresh,800);}\n    @Override protected void onPause(){super.onPause();handler.removeCallbacks(refresh);}\n', ''),
-              ('ScrollView sc=new ScrollView(this);root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setPadding(dp(18),dp(16),dp(18),dp(28));', 'ScrollView sc=new ScrollView(this);sc.setFillViewport(true);sc.setClipToPadding(false);root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setPadding(dp(18),dp(16),dp(18),dp(120));'),
-              ('        handler.removeCallbacks(refresh);\n        base("dashboard","Mileage Tracker");', '        base("dashboard","Mileage Tracker");'),
-              ('        handler.postDelayed(refresh,1200);\n    }', '    }'),
+              (
+                  'import android.content.pm.PackageManager;\n',
+                  'import android.content.pm.PackageManager;\nimport android.content.res.ColorStateList;\n'
+              ),
+              (
+                  '    private final int NAVY=Color.rgb(6,26,67),GOLD=Color.rgb(217,140,0),BG=Color.rgb(245,247,251);\n'
+                  '    private LinearLayout root; private DatabaseHelper db; private Handler handler=new Handler(Looper.getMainLooper());\n'
+                  '    private final Runnable refresh=()->{ if(root!=null && root.getTag()!=null && "dashboard".equals(root.getTag())) showDashboard(); };\n',
+                  '    private final int NAVY=Color.rgb(6,26,67),GOLD=Color.rgb(217,140,0),BG=Color.BLACK,CARD=Color.rgb(6,26,67),MUTED=Color.rgb(205,211,222);\n'
+                  '    private LinearLayout root; private DatabaseHelper db; private Handler handler=new Handler(Looper.getMainLooper()); private TextView activeMilesView;\n'
+                  '    private final Runnable refresh=()->{ if(root!=null && root.getTag()!=null && "dashboard".equals(root.getTag())){ DatabaseHelper.Trip t=db.activeTrip(); if(t!=null && activeMilesView!=null)activeMilesView.setText(String.format(Locale.US,"%.1f miles",t.miles)); handler.postDelayed(refresh,1200); } };\n'
+              ),
+              (
+                  '@Override public void onCreate(Bundle b){super.onCreate(b);db=new DatabaseHelper(this);showDashboard();handleAction(getIntent());}',
+                  '@Override public void onCreate(Bundle b){super.onCreate(b);getWindow().setStatusBarColor(BG);getWindow().setNavigationBarColor(BG);db=new DatabaseHelper(this);showDashboard();handleAction(getIntent());}'
+              ),
+              (
+                  '        ScrollView sc=new ScrollView(this);root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setPadding(dp(18),dp(16),dp(18),dp(28));root.setBackgroundColor(BG);root.setTag(tag);sc.addView(root);setContentView(sc);\n'
+                  '        ImageView logo=new ImageView(this);logo.setImageResource(com.baileyanns.mileage.R.drawable.ba1_logo);logo.setScaleType(ImageView.ScaleType.CENTER_INSIDE);root.addView(logo,new LinearLayout.LayoutParams(-1,dp(105))); TextView t=text(title,24,NAVY,true);t.setPadding(0,dp(8),0,dp(14));root.addView(t);',
+                  '        ScrollView sc=new ScrollView(this);sc.setFillViewport(true);sc.setClipToPadding(false);sc.setBackgroundColor(BG);root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setPadding(dp(18),dp(16),dp(18),dp(120));root.setBackgroundColor(BG);root.setTag(tag);sc.addView(root);setContentView(sc);\n'
+                  '        ImageView logo=new ImageView(this);logo.setImageResource(com.baileyanns.mileage.R.drawable.ba1_logo);logo.setScaleType(ImageView.ScaleType.CENTER_INSIDE);logo.setPadding(dp(8),dp(8),dp(8),dp(8));android.graphics.drawable.GradientDrawable lg=new android.graphics.drawable.GradientDrawable();lg.setColor(Color.WHITE);lg.setCornerRadius(dp(12));lg.setStroke(dp(1),GOLD);logo.setBackground(lg);root.addView(logo,new LinearLayout.LayoutParams(-1,dp(112))); TextView t=text(title,24,Color.WHITE,true);t.setPadding(0,dp(12),0,dp(14));root.addView(t);'
+              ),
+              (
+                  '            card.addView(text(String.format(Locale.US,"%.1f miles",active.miles),34,NAVY,true));',
+                  '            activeMilesView=text(String.format(Locale.US,"%.1f miles",active.miles),34,Color.WHITE,true);card.addView(activeMilesView);'
+              ),
+              (
+                  '        } else {\n            root.addView(button("START ESTATE MILES"',
+                  '        } else {\n            activeMilesView=null;\n            root.addView(button("START ESTATE MILES"'
+              ),
+              (
+                  'EditText year=new EditText(this);year.setInputType(2);year.setText(String.valueOf(Calendar.getInstance().get(Calendar.YEAR)));',
+                  'EditText year=new EditText(this);year.setInputType(2);year.setText(String.valueOf(Calendar.getInstance().get(Calendar.YEAR)));styleField(year);'
+              ),
+              (
+                  'EditText code=new EditText(this);code.setHint("6-digit pairing code shown in Business Manager");code.setInputType(2);code.setText(Prefs.pairingCode(this));',
+                  'EditText code=new EditText(this);code.setHint("6-digit pairing code shown in Business Manager");code.setInputType(2);code.setText(Prefs.pairingCode(this));styleField(code);'
+              ),
+              (
+                  'Switch sw=new Switch(this);sw.setText("Enable car connection reminder");',
+                  'Switch sw=new Switch(this);sw.setText("Enable car connection reminder");sw.setTextColor(Color.WHITE);'
+              ),
+              (
+                  '    private LinearLayout card(){LinearLayout c=new LinearLayout(this);c.setOrientation(LinearLayout.VERTICAL);c.setPadding(dp(16),dp(16),dp(16),dp(16));android.graphics.drawable.GradientDrawable g=new android.graphics.drawable.GradientDrawable();g.setColor(Color.WHITE);g.setCornerRadius(dp(12));g.setStroke(dp(1),Color.rgb(220,226,235));c.setBackground(g);return c;}',
+                  '    private LinearLayout card(){LinearLayout c=new LinearLayout(this);c.setOrientation(LinearLayout.VERTICAL);c.setPadding(dp(16),dp(16),dp(16),dp(16));android.graphics.drawable.GradientDrawable g=new android.graphics.drawable.GradientDrawable();g.setColor(CARD);g.setCornerRadius(dp(12));g.setStroke(dp(1),GOLD);c.setBackground(g);return c;}'
+              ),
+              (
+                  '    private Button button(String s,View.OnClickListener l,boolean primary){Button b=new Button(this);b.setText(s);b.setAllCaps(false);b.setTextSize(16);b.setTextColor(primary?Color.WHITE:NAVY);android.graphics.drawable.GradientDrawable g=new android.graphics.drawable.GradientDrawable();g.setColor(primary?NAVY:Color.WHITE);g.setStroke(dp(2),primary?NAVY:GOLD);g.setCornerRadius(dp(10));b.setBackground(g);b.setPadding(dp(12),dp(12),dp(12),dp(12));b.setOnClickListener(l);return b;}',
+                  '    private Button button(String s,View.OnClickListener l,boolean primary){Button b=new Button(this);b.setText(s);b.setAllCaps(false);b.setTextSize(16);b.setTextColor(primary?Color.BLACK:GOLD);android.graphics.drawable.GradientDrawable g=new android.graphics.drawable.GradientDrawable();g.setColor(primary?GOLD:NAVY);g.setStroke(dp(1),GOLD);g.setCornerRadius(dp(10));b.setBackground(g);b.setPadding(dp(12),dp(12),dp(12),dp(12));b.setOnClickListener(l);return b;}'
+              ),
+              (
+                  '    private double number(String s){try{return Math.max(0,Double.parseDouble(s.trim()));}catch(Exception e){return 0;}}\n}',
+                  '    private void styleField(EditText e){e.setTextColor(Color.WHITE);e.setHintTextColor(MUTED);if(Build.VERSION.SDK_INT>=21)e.setBackgroundTintList(ColorStateList.valueOf(GOLD));}\n'
+                  '    private double number(String s){try{return Math.max(0,Double.parseDouble(s.trim()));}catch(Exception e){return 0;}}\n}'
+              ),
           ]
 
           for old, new in changes:
               if old not in s:
-                  raise SystemExit('Expected scrolling source was not found')
+                  raise SystemExit('Expected branding source was not found: ' + old[:80])
               s = s.replace(old, new, 1)
 
+          s = s.replace(',NAVY,true)', ',Color.WHITE,true)')
+          s = s.replace(',NAVY,false)', ',Color.WHITE,false)')
+          s = s.replace('Color.DKGRAY', 'MUTED')
           p.write_text(s)
 
-          strings = Path('app/src/main/res/values/strings.xml')
-          text = strings.read_text().replace('Mileage Tracker v1.1', 'Mileage Tracker v1.2')
-          strings.write_text(text)
+          g = Path('app/build.gradle')
+          gs = g.read_text()
+          gs = gs.replace('versionCode 3', 'versionCode 4', 1)
+          gs = gs.replace("versionName '1.2'", "versionName '1.3'", 1)
+          g.write_text(gs)
           PY
 
       - name: Set up Java 17
@@ -71,11 +126,11 @@ jobs:
         run: gradle --no-daemon :app:assembleDebug
 
       - name: Rename APK
-        run: cp app/build/outputs/apk/debug/app-debug.apk Bailey_Anns_Mileage_Tracker_v1.2_SCROLL_FIX.apk
+        run: cp app/build/outputs/apk/debug/app-debug.apk Bailey_Anns_Mileage_Tracker_v1.3_PREMIUM_DARK.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v7
         with:
-          name: Bailey_Anns_Mileage_Tracker_v1.2_SCROLL_FIX
-          path: Bailey_Anns_Mileage_Tracker_v1.2_SCROLL_FIX.apk
+          name: Bailey_Anns_Mileage_Tracker_v1.3_PREMIUM_DARK
+          path: Bailey_Anns_Mileage_Tracker_v1.3_PREMIUM_DARK.apk
           if-no-files-found: error
