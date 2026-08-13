@@ -1,0 +1,5 @@
+private void showPremiumDashboard() {
+    LinearLayout dashboard = new LinearLayout(this);
+    dashboard.setOrientation(LinearLayout.VERTICAL);
+    dashboard.setBackgroundColor(Color.rgb(1,14,29));
+}
