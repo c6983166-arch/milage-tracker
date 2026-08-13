@@ -16,6 +16,41 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v6
 
+      - name: Restore stable app signing key
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: bailey-anns-mileage-debug-key-v1
+
+      - name: Apply scrolling fix
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p = Path('app/src/main/java/com/baileyanns/mileage/MainActivity.java')
+          s = p.read_text()
+
+          changes = [
+              ('    private final Runnable refresh=()->{ if(root!=null && root.getTag()!=null && "dashboard".equals(root.getTag())) showDashboard(); };\n', ''),
+              ('    @Override protected void onResume(){super.onResume();handler.postDelayed(refresh,800);}\n    @Override protected void onPause(){super.onPause();handler.removeCallbacks(refresh);}\n', ''),
+              ('ScrollView sc=new ScrollView(this);root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setPadding(dp(18),dp(16),dp(18),dp(28));', 'ScrollView sc=new ScrollView(this);sc.setFillViewport(true);sc.setClipToPadding(false);root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setPadding(dp(18),dp(16),dp(18),dp(120));'),
+              ('        handler.removeCallbacks(refresh);\n        base("dashboard","Mileage Tracker");', '        base("dashboard","Mileage Tracker");'),
+              ('        handler.postDelayed(refresh,1200);\n    }', '    }'),
+          ]
+
+          for old, new in changes:
+              if old not in s:
+                  raise SystemExit('Expected scrolling source was not found')
+              s = s.replace(old, new, 1)
+
+          p.write_text(s)
+
+          strings = Path('app/src/main/res/values/strings.xml')
+          text = strings.read_text().replace('Mileage Tracker v1.1', 'Mileage Tracker v1.2')
+          strings.write_text(text)
+          PY
+
       - name: Set up Java 17
         uses: actions/setup-java@v5
         with:
@@ -36,11 +71,11 @@ jobs:
         run: gradle --no-daemon :app:assembleDebug
 
       - name: Rename APK
-        run: cp app/build/outputs/apk/debug/app-debug.apk Bailey_Anns_Mileage_Tracker_v1.1.apk
+        run: cp app/build/outputs/apk/debug/app-debug.apk Bailey_Anns_Mileage_Tracker_v1.2_SCROLL_FIX.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v7
         with:
-          name: Bailey_Anns_Mileage_Tracker_v1.1_APK
-          path: Bailey_Anns_Mileage_Tracker_v1.1.apk
+          name: Bailey_Anns_Mileage_Tracker_v1.2_SCROLL_FIX
+          path: Bailey_Anns_Mileage_Tracker_v1.2_SCROLL_FIX.apk
           if-no-files-found: error
