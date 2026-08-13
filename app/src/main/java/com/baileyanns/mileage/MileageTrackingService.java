@@ -2,7 +2,6 @@ package com.baileyanns.mileage;
 
 import android.Manifest;
 import android.app.*;
-import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
@@ -25,7 +24,7 @@ public class MileageTrackingService extends Service implements LocationListener 
     @Override public void onCreate(){ super.onCreate(); db=new DatabaseHelper(this); lm=(LocationManager)getSystemService(LOCATION_SERVICE); createChannel(); }
     @Override public int onStartCommand(Intent intent,int flags,int startId){
         String action=intent==null?"":intent.getAction();
-        if(ACTION_STOP.equals(action)){ stopTrip(); return START_NOT_STICKY; }
+        if(ACTION_STOP.equals(action)){ stopTrip(intent); return START_NOT_STICKY; }
         if(ACTION_START.equals(action)){ startTrip(intent); }
         else if((action==null||action.isEmpty()) && db.activeTrip()!=null){ startTrip(new Intent()); }
         return START_STICKY;
@@ -35,7 +34,8 @@ public class MileageTrackingService extends Service implements LocationListener 
         if(active!=null){ tripId=active.id; meters=active.miles*1609.344; }
         else {
             String type=i.getStringExtra("tripType"),estateId=i.getStringExtra("estateId"),estateName=i.getStringExtra("estateName"),purpose=i.getStringExtra("purpose");
-            long now=System.currentTimeMillis(); tripId=db.createTrip(type,nvl(estateId),nvl(estateName),nvl(purpose),fmt("yyyy-MM-dd",now),fmt("h:mm a",now),now);
+            double startOdometer=i.getDoubleExtra("startOdometer",0);
+            long now=System.currentTimeMillis(); tripId=db.createTrip(type,nvl(estateId),nvl(estateName),nvl(purpose),fmt("yyyy-MM-dd",now),fmt("h:mm a",now),now,startOdometer);
         }
         startForeground(NOTIFY_ID,notification("Mileage tracking is active"));
         if(checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)==PackageManager.PERMISSION_GRANTED){
@@ -43,9 +43,9 @@ public class MileageTrackingService extends Service implements LocationListener 
             try { lm.requestLocationUpdates(LocationManager.NETWORK_PROVIDER,5000,10,this); } catch(Exception ignored){}
         }
     }
-    private void stopTrip(){
+    private void stopTrip(Intent intent){
         try{lm.removeUpdates(this);}catch(Exception ignored){}
-        DatabaseHelper.Trip t=db.activeTrip(); if(t!=null){ double lat=last==null?t.endLat:last.getLatitude(),lon=last==null?t.endLon:last.getLongitude(); long now=System.currentTimeMillis(); db.finishTrip(t.id,fmt("h:mm a",now),now,meters/1609.344,lat,lon); }
+        DatabaseHelper.Trip t=db.activeTrip(); if(t!=null){ double lat=last==null?t.endLat:last.getLatitude(),lon=last==null?t.endLon:last.getLongitude(); long now=System.currentTimeMillis(); double endOdometer=intent==null?0:intent.getDoubleExtra("endOdometer",0); db.finishTrip(t.id,fmt("h:mm a",now),now,meters/1609.344,lat,lon,endOdometer); }
         sendBroadcast(new Intent(ACTION_UPDATED).setPackage(getPackageName())); stopForeground(STOP_FOREGROUND_REMOVE); stopSelf();
     }
     @Override public void onLocationChanged(Location loc){
@@ -59,6 +59,11 @@ public class MileageTrackingService extends Service implements LocationListener 
     @Override public void onProviderEnabled(String p){} @Override public void onProviderDisabled(String p){} @Override public void onStatusChanged(String p,int s,Bundle b){}
     @Override public IBinder onBind(Intent intent){return null;}
     private void createChannel(){ if(android.os.Build.VERSION.SDK_INT>=26){ NotificationChannel c=new NotificationChannel("mileage_tracking","Mileage Tracking",NotificationManager.IMPORTANCE_LOW); c.setDescription("Shown while a business trip is being recorded."); getSystemService(NotificationManager.class).createNotificationChannel(c);} }
-    private Notification notification(String text){ Intent stop=new Intent(this,MileageTrackingService.class).setAction(ACTION_STOP); PendingIntent pi=PendingIntent.getService(this,2,stop,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE); Intent open=new Intent(this,MainActivity.class); PendingIntent oi=PendingIntent.getActivity(this,3,open,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE); return new Notification.Builder(this,"mileage_tracking").setSmallIcon(android.R.drawable.ic_menu_mylocation).setContentTitle("Bailey Ann's Mileage Tracker").setContentText(text).setOngoing(true).setContentIntent(oi).addAction(new Notification.Action.Builder(null,"End Trip",pi).build()).build(); }
+    private Notification notification(String text){
+        Intent review=new Intent(this,MainActivity.class).setAction(MainActivity.ACTION_REVIEW_END).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP|Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        PendingIntent pi=PendingIntent.getActivity(this,2,review,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
+        Intent open=new Intent(this,MainActivity.class); PendingIntent oi=PendingIntent.getActivity(this,3,open,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
+        return new Notification.Builder(this,"mileage_tracking").setSmallIcon(android.R.drawable.ic_menu_mylocation).setContentTitle("Bailey Ann's Mileage Tracker").setContentText(text).setOngoing(true).setContentIntent(oi).addAction(new Notification.Action.Builder(null,"Review / End Trip",pi).build()).build();
+    }
     private static String nvl(String s){return s==null?"":s;} private static String fmt(String f,long t){return new SimpleDateFormat(f,Locale.US).format(new Date(t));}
 }
