@@ -63,7 +63,22 @@
                     <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:letterSpacing="0.06" android:text="HIDDEN TREASURES" android:textColor="#000000" android:textSize="13sp" android:textStyle="bold" />
                     <TextView android:id="@+id/previewPrice" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:gravity="center" android:text="$0.00" android:textColor="#000000" android:textSize="42sp" android:textStyle="bold" />
                 </LinearLayout>
-                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:gravity="center" android:text="Label Size: 1.25” × 1.00”" android:textColor="#333333" android:textSize="14sp" android:textStyle="bold" />
+
+                <TextView android:id="@+id/previewSize" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:gravity="center" android:text="Label Size: 1.25” × 1.00”" android:textColor="#333333" android:textSize="14sp" android:textStyle="bold" />
+
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:orientation="horizontal">
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Width (inches)" android:textColor="#222222" android:textSize="13sp" />
+                        <EditText android:id="@+id/widthInput" android:layout_width="match_parent" android:layout_height="52dp" android:layout_marginTop="4dp" android:background="@drawable/input_border" android:digits="0123456789." android:gravity="center" android:inputType="numberDecimal" android:selectAllOnFocus="true" android:text="1.25" android:textColor="#000000" android:textSize="18sp" android:textStyle="bold" />
+                    </LinearLayout>
+
+                    <TextView android:layout_width="34dp" android:layout_height="76dp" android:gravity="center|bottom" android:paddingBottom="13dp" android:text="×" android:textColor="#111111" android:textSize="20sp" android:textStyle="bold" />
+
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Height (inches)" android:textColor="#222222" android:textSize="13sp" />
+                        <EditText android:id="@+id/heightInput" android:layout_width="match_parent" android:layout_height="52dp" android:layout_marginTop="4dp" android:background="@drawable/input_border" android:digits="0123456789." android:gravity="center" android:inputType="numberDecimal" android:selectAllOnFocus="true" android:text="1.00" android:textColor="#000000" android:textSize="18sp" android:textStyle="bold" />
+                    </LinearLayout>
+                </LinearLayout>
             </LinearLayout>
 
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="18dp" android:text="3. QUANTITY  (NUMBER OF LABELS)" android:textColor="#111111" android:textSize="18sp" android:textStyle="bold" />
@@ -101,7 +116,7 @@
 
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="18dp" android:background="#000000" android:gravity="center_vertical" android:orientation="horizontal" android:padding="12dp">
                 <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="HIDDEN TREASURES LABEL PRINTER" android:textColor="#FFD400" android:textSize="12sp" android:textStyle="bold" />
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="v1.3" android:textColor="#FFFFFF" android:textSize="12sp" />
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="v1.3.3" android:textColor="#FFFFFF" android:textSize="12sp" />
             </LinearLayout>
         </LinearLayout>
     </LinearLayout>
