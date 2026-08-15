@@ -5,19 +5,32 @@ import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.Typeface;
 import android.os.Build;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.view.View;
+import android.view.WindowManager;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Spinner;
+import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.Method;
@@ -32,40 +45,65 @@ import java.util.UUID;
 public class MainActivity extends Activity {
     private static final int REQ_BLUETOOTH_PERMISSIONS = 1001;
     private static final UUID SPP_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
+    private static final double LABEL_WIDTH_IN = 1.25;
+    private static final double LABEL_HEIGHT_IN = 1.00;
+    private static final String PREFS = "ht_label_printer_prefs";
+    private static final String PREF_LAST_PRINTER = "last_printer_address";
+    private static final String PREF_AUTO_CONNECT = "auto_connect";
 
     private EditText priceInput;
-    private EditText widthInput;
-    private EditText heightInput;
     private Spinner printerSpinner;
     private TextView statusText;
     private TextView connectionBadge;
     private TextView previewPrice;
-    private TextView previewSize;
     private TextView quantityText;
     private TextView quantitySummary;
     private Button connectButton;
+    private Switch autoConnectSwitch;
 
     private BluetoothAdapter bluetoothAdapter;
     private final List<BluetoothDevice> pairedDevices = new ArrayList<>();
     private BluetoothSocket socket;
     private OutputStream outputStream;
+    private SharedPreferences prefs;
     private int quantity = 1;
+    private volatile boolean connecting = false;
+    private boolean receiverRegistered = false;
+
+    private final BroadcastReceiver bluetoothStateReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (BluetoothAdapter.ACTION_STATE_CHANGED.equals(intent.getAction())) {
+                int state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.ERROR);
+                if (state == BluetoothAdapter.STATE_ON) {
+                    loadPairedPrinters(true);
+                } else if (state == BluetoothAdapter.STATE_OFF) {
+                    closeConnection();
+                    updateConnectionUi(false);
+                    statusText.setText("Bluetooth is off");
+                }
+            }
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
         setContentView(R.layout.activity_main);
 
+        View root = findViewById(R.id.rootContent);
+        root.setFocusableInTouchMode(true);
+        root.requestFocus();
+
         priceInput = findViewById(R.id.priceInput);
-        widthInput = findViewById(R.id.widthInput);
-        heightInput = findViewById(R.id.heightInput);
         printerSpinner = findViewById(R.id.printerSpinner);
         statusText = findViewById(R.id.statusText);
         connectionBadge = findViewById(R.id.connectionBadge);
         previewPrice = findViewById(R.id.previewPrice);
-        previewSize = findViewById(R.id.previewSize);
         quantityText = findViewById(R.id.quantityText);
         quantitySummary = findViewById(R.id.quantitySummary);
+        autoConnectSwitch = findViewById(R.id.autoConnectSwitch);
 
         Button refreshButton = findViewById(R.id.refreshButton);
         connectButton = findViewById(R.id.connectButton);
@@ -74,6 +112,14 @@ public class MainActivity extends Activity {
         Button plusButton = findViewById(R.id.plusButton);
 
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
+        autoConnectSwitch.setChecked(prefs.getBoolean(PREF_AUTO_CONNECT, true));
+        autoConnectSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            prefs.edit().putBoolean(PREF_AUTO_CONNECT, isChecked).apply();
+            if (isChecked && !isConnected()) {
+                loadPairedPrinters(true);
+            }
+        });
 
         TextWatcher previewWatcher = new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
@@ -81,8 +127,6 @@ public class MainActivity extends Activity {
             @Override public void afterTextChanged(Editable s) {}
         };
         priceInput.addTextChangedListener(previewWatcher);
-        widthInput.addTextChangedListener(previewWatcher);
-        heightInput.addTextChangedListener(previewWatcher);
 
         minusButton.setOnClickListener(v -> {
             if (quantity > 1) {
@@ -97,15 +141,29 @@ public class MainActivity extends Activity {
             }
         });
 
-        refreshButton.setOnClickListener(v -> loadPairedPrinters());
+        refreshButton.setOnClickListener(v -> loadPairedPrinters(false));
         connectButton.setOnClickListener(v -> togglePrinterConnection());
         printButton.setOnClickListener(v -> printLabel());
 
         updateQuantityUi();
         updatePreview();
         updateConnectionUi(false);
+        registerBluetoothReceiver();
         requestBluetoothPermissionsIfNeeded();
-        loadPairedPrinters();
+        loadPairedPrinters(true);
+
+        priceInput.clearFocus();
+    }
+
+    private void registerBluetoothReceiver() {
+        if (receiverRegistered) return;
+        IntentFilter filter = new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED);
+        if (Build.VERSION.SDK_INT >= 33) {
+            registerReceiver(bluetoothStateReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
+        } else {
+            registerReceiver(bluetoothStateReceiver, filter);
+        }
+        receiverRegistered = true;
     }
 
     private void requestBluetoothPermissionsIfNeeded() {
@@ -128,7 +186,7 @@ public class MainActivity extends Activity {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == REQ_BLUETOOTH_PERMISSIONS) {
             if (hasBluetoothConnectPermission()) {
-                loadPairedPrinters();
+                loadPairedPrinters(true);
             } else {
                 statusText.setText("Bluetooth permission is required to connect to the printer");
             }
@@ -145,7 +203,7 @@ public class MainActivity extends Activity {
                 checkSelfPermission(Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED;
     }
 
-    private void loadPairedPrinters() {
+    private void loadPairedPrinters(boolean attemptAutoConnect) {
         if (bluetoothAdapter == null) {
             statusText.setText("Bluetooth is not available on this device");
             return;
@@ -155,7 +213,7 @@ public class MainActivity extends Activity {
             return;
         }
         if (!bluetoothAdapter.isEnabled()) {
-            statusText.setText("Turn Bluetooth on, then tap Find Printers");
+            statusText.setText("Turn Bluetooth on. Auto Connect will resume when Bluetooth is available.");
             return;
         }
 
@@ -176,21 +234,44 @@ public class MainActivity extends Activity {
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         printerSpinner.setAdapter(adapter);
 
-        for (int i = 0; i < pairedDevices.size(); i++) {
-            String name = safeDeviceName(pairedDevices.get(i));
-            if (name.toUpperCase(Locale.US).contains("9220")) {
-                printerSpinner.setSelection(i);
-                break;
-            }
+        int selectedIndex = choosePreferredPrinterIndex();
+        if (selectedIndex >= 0 && selectedIndex < pairedDevices.size()) {
+            printerSpinner.setSelection(selectedIndex);
+        }
+
+        if (attemptAutoConnect && autoConnectSwitch.isChecked() && selectedIndex >= 0 && !isConnected() && !connecting) {
+            connectDevice(pairedDevices.get(selectedIndex), true);
         }
     }
 
-    private void togglePrinterConnection() {
+    private int choosePreferredPrinterIndex() {
+        String savedAddress = prefs.getString(PREF_LAST_PRINTER, "");
+        if (!savedAddress.isEmpty()) {
+            for (int i = 0; i < pairedDevices.size(); i++) {
+                if (savedAddress.equalsIgnoreCase(pairedDevices.get(i).getAddress())) {
+                    return i;
+                }
+            }
+        }
+        for (int i = 0; i < pairedDevices.size(); i++) {
+            String name = safeDeviceName(pairedDevices.get(i));
+            if (name.toUpperCase(Locale.US).contains("9220")) {
+                return i;
+            }
+        }
+        return pairedDevices.isEmpty() ? -1 : 0;
+    }
+
+    private boolean isConnected() {
         BluetoothSocket active;
         synchronized (this) {
             active = socket;
         }
-        if (active != null && active.isConnected()) {
+        return active != null && active.isConnected();
+    }
+
+    private void togglePrinterConnection() {
+        if (isConnected()) {
             closeConnection();
             updateConnectionUi(false);
             statusText.setText("Printer disconnected");
@@ -214,23 +295,34 @@ public class MainActivity extends Activity {
             Toast.makeText(this, "Pair the POS-9220-L in Android Bluetooth settings first.", Toast.LENGTH_LONG).show();
             return;
         }
+        connectDevice(pairedDevices.get(pos), false);
+    }
 
-        BluetoothDevice device = pairedDevices.get(pos);
-        statusText.setText("Connecting to " + safeDeviceName(device) + "…");
-        connectionBadge.setText("Connecting…");
-        connectionBadge.setTextColor(Color.parseColor("#1565C0"));
+    private void connectDevice(BluetoothDevice device, boolean automatic) {
+        if (connecting || isConnected()) return;
+        connecting = true;
+        String prefix = automatic ? "Auto connecting to " : "Connecting to ";
+        statusText.setText(prefix + safeDeviceName(device) + "…");
+        connectionBadge.setText(automatic ? "Auto Connecting…" : "Connecting…");
+        connectionBadge.setTextColor(Color.parseColor("#8A6A00"));
 
         new Thread(() -> {
             closeConnection();
             cancelDiscoverySafely();
 
             List<String> errors = new ArrayList<>();
-            if (tryConnect(device, ConnectionMethod.INSECURE_SPP, errors) ||
+            boolean connected = tryConnect(device, ConnectionMethod.INSECURE_SPP, errors) ||
                     tryConnect(device, ConnectionMethod.SECURE_SPP, errors) ||
-                    tryConnect(device, ConnectionMethod.DIRECT_CHANNEL_1, errors)) {
+                    tryConnect(device, ConnectionMethod.DIRECT_CHANNEL_1, errors);
+
+            connecting = false;
+            if (connected) {
+                prefs.edit().putString(PREF_LAST_PRINTER, device.getAddress()).apply();
                 runOnUiThread(() -> {
                     updateConnectionUi(true);
-                    statusText.setText("Connected and ready to print");
+                    statusText.setText(autoConnectSwitch.isChecked()
+                            ? "Auto Connect is ON • Connected and ready to print"
+                            : "Connected and ready to print");
                 });
                 return;
             }
@@ -245,14 +337,14 @@ public class MainActivity extends Activity {
 
     private void updateConnectionUi(boolean connected) {
         if (connected) {
-            connectionBadge.setText("Bluetooth Connected");
-            connectionBadge.setTextColor(Color.parseColor("#1565C0"));
+            connectionBadge.setText("Connected and ready");
+            connectionBadge.setTextColor(Color.parseColor("#0A8F2D"));
             connectButton.setText("DISCONNECT");
             connectButton.setTextColor(Color.parseColor("#E53935"));
             connectButton.setBackgroundResource(R.drawable.button_disconnect);
         } else {
             connectionBadge.setText("Not connected");
-            connectionBadge.setTextColor(Color.parseColor("#777777"));
+            connectionBadge.setTextColor(Color.parseColor("#666666"));
             connectButton.setText("CONNECT");
             connectButton.setTextColor(Color.parseColor("#111111"));
             connectButton.setBackgroundResource(R.drawable.button_outline);
@@ -338,14 +430,6 @@ public class MainActivity extends Activity {
                 previewPrice.setText("$0.00");
             }
         }
-
-        String width = widthInput == null ? "1.25" : widthInput.getText().toString().trim();
-        String height = heightInput == null ? "1.00" : heightInput.getText().toString().trim();
-        if (width.isEmpty()) width = "1.25";
-        if (height.isEmpty()) height = "1.00";
-        if (previewSize != null) {
-            previewSize.setText("Label Size: " + width + "” × " + height + "”");
-        }
     }
 
     private void printLabel() {
@@ -357,7 +441,10 @@ public class MainActivity extends Activity {
         }
 
         if (activeOutput == null || activeSocket == null || !activeSocket.isConnected()) {
-            Toast.makeText(this, "Connect to the printer first.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Printer is not connected yet.", Toast.LENGTH_SHORT).show();
+            if (autoConnectSwitch.isChecked()) {
+                loadPairedPrinters(true);
+            }
             return;
         }
 
@@ -368,92 +455,141 @@ public class MainActivity extends Activity {
         }
 
         double price;
-        double widthIn;
-        double heightIn;
         try {
             price = Double.parseDouble(rawPrice.replace("$", ""));
-            widthIn = Double.parseDouble(widthInput.getText().toString().trim());
-            heightIn = Double.parseDouble(heightInput.getText().toString().trim());
         } catch (NumberFormatException e) {
-            Toast.makeText(this, "Check the price and label size.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Check the price.", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        if (price < 0 || widthIn <= 0 || heightIn <= 0) {
-            Toast.makeText(this, "Price and label size must be valid positive values.", Toast.LENGTH_SHORT).show();
+        if (price < 0) {
+            Toast.makeText(this, "Enter a valid price.", Toast.LENGTH_SHORT).show();
             return;
         }
 
         String formattedPrice = "$" + new DecimalFormat("0.00").format(price);
-        String command = buildTsplLabel(widthIn, heightIn, formattedPrice, quantity);
+        byte[] command = buildTsplLabelBytes(LABEL_WIDTH_IN, LABEL_HEIGHT_IN, formattedPrice, quantity);
         statusText.setText(quantity == 1 ? "Printing 1 label…" : "Printing " + quantity + " labels…");
 
         new Thread(() -> {
             try {
-                activeOutput.write(command.getBytes(StandardCharsets.US_ASCII));
+                activeOutput.write(command);
                 activeOutput.flush();
-                runOnUiThread(() -> statusText.setText(quantity == 1 ? "1 label sent to printer" : quantity + " labels sent to printer"));
+                runOnUiThread(() -> statusText.setText(quantity == 1
+                        ? "1 label sent to printer"
+                        : quantity + " labels sent to printer"));
             } catch (IOException e) {
                 closeConnection();
                 runOnUiThread(() -> {
                     updateConnectionUi(false);
-                    statusText.setText("Print connection was lost. Tap Connect and try again.\n" + e.getMessage());
+                    statusText.setText("Print connection was lost. Auto Connect will retry when available.\n" + e.getMessage());
+                    if (autoConnectSwitch.isChecked()) {
+                        loadPairedPrinters(true);
+                    }
                 });
             }
         }).start();
     }
 
-    private String buildTsplLabel(double widthIn, double heightIn, String price, int copies) {
-        double widthMm = widthIn * 25.4;
-        double heightMm = heightIn * 25.4;
-        int widthDots = Math.max(120, (int) Math.round(widthMm * 8.0));
-        int heightDots = Math.max(120, (int) Math.round(heightMm * 8.0));
+    private byte[] buildTsplLabelBytes(double widthIn, double heightIn, String price, int copies) {
+        try {
+            double widthMm = widthIn * 25.4;
+            double heightMm = heightIn * 25.4;
+            int widthDots = Math.max(120, (int) Math.round(widthMm * 8.0));
+            int heightDots = Math.max(120, (int) Math.round(heightMm * 8.0));
 
-        int htWidth = 48;
-        int nameWidth = 192;
+            Bitmap logo = createMonochromeBrandLogo(Math.min(widthDots - 18, 224), 76);
+            byte[] logoData = bitmapToTsplMono(logo);
+            int logoBytesPerRow = (logo.getWidth() + 7) / 8;
+            int logoX = Math.max(2, (widthDots - logo.getWidth()) / 2);
+            int logoY = 5;
 
-        String priceFont;
-        int priceXMul;
-        int priceYMul;
-        int charWidth;
-        if (price.length() <= 7) {
-            priceFont = "3";
-            priceXMul = 2;
-            priceYMul = 2;
-            charWidth = 32;
-        } else {
-            priceFont = "4";
-            priceXMul = 1;
-            priceYMul = 1;
-            charWidth = 24;
+            String priceFont = price.length() <= 7 ? "3" : "2";
+            int priceMul = price.length() <= 7 ? 2 : 2;
+            int estimatedCharWidth = price.length() <= 7 ? 32 : 24;
+            int priceWidth = price.length() * estimatedCharWidth;
+            int priceX = Math.max(2, (widthDots - priceWidth) / 2);
+            int priceY = Math.min(heightDots - 62, 112);
+
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            writeAscii(out, String.format(Locale.US,
+                    "SIZE %.2f mm,%.2f mm\r\n" +
+                    "GAP 2 mm,0 mm\r\n" +
+                    "DENSITY 8\r\n" +
+                    "DIRECTION 1\r\n" +
+                    "CLS\r\n",
+                    widthMm, heightMm));
+
+            writeAscii(out, String.format(Locale.US,
+                    "BITMAP %d,%d,%d,%d,0,",
+                    logoX, logoY, logoBytesPerRow, logo.getHeight()));
+            out.write(logoData);
+            writeAscii(out, "\r\n");
+
+            writeAscii(out, String.format(Locale.US,
+                    "TEXT %d,%d,\"%s\",0,%d,%d,\"%s\"\r\n" +
+                    "PRINT 1,%d\r\n",
+                    priceX, priceY, priceFont, priceMul, priceMul,
+                    price.replace("\"", ""), Math.max(1, copies)));
+            return out.toByteArray();
+        } catch (IOException e) {
+            throw new IllegalStateException("Unable to build label", e);
         }
-        int priceWidth = price.length() * charWidth;
+    }
 
-        int htX = Math.max(0, (widthDots - htWidth) / 2);
-        int nameX = Math.max(0, (widthDots - nameWidth) / 2);
-        int priceX = Math.max(2, (widthDots - priceWidth) / 2);
+    private Bitmap createMonochromeBrandLogo(int width, int height) {
+        Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(bitmap);
+        canvas.drawColor(Color.WHITE);
 
-        int htY = Math.max(2, (int) Math.round(heightDots * 0.05));
-        int nameY = Math.max(34, (int) Math.round(heightDots * 0.29));
-        int priceY = Math.max(72, (int) Math.round(heightDots * 0.55));
+        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        paint.setColor(Color.BLACK);
+        paint.setTextAlign(Paint.Align.CENTER);
 
-        return String.format(Locale.US,
-                "SIZE %.2f mm,%.2f mm\r\n" +
-                "GAP 2 mm,0 mm\r\n" +
-                "DENSITY 8\r\n" +
-                "DIRECTION 1\r\n" +
-                "CLS\r\n" +
-                "TEXT %d,%d,\"4\",0,1,1,\"HT\"\r\n" +
-                "TEXT %d,%d,\"2\",0,1,1,\"HIDDEN TREASURES\"\r\n" +
-                "TEXT %d,%d,\"%s\",0,%d,%d,\"%s\"\r\n" +
-                "PRINT 1,%d\r\n",
-                widthMm, heightMm,
-                htX, htY,
-                nameX, nameY,
-                priceX, priceY,
-                priceFont, priceXMul, priceYMul,
-                price.replace("\"", ""),
-                Math.max(1, copies));
+        paint.setTypeface(Typeface.create(Typeface.SERIF, Typeface.BOLD));
+        paint.setTextSize(43f);
+        Paint.FontMetrics htMetrics = paint.getFontMetrics();
+        float htBaseline = 5f - htMetrics.top;
+        canvas.drawText("HT", width / 2f, htBaseline, paint);
+
+        float barY = 28f;
+        paint.setStrokeWidth(4f);
+        canvas.drawLine(10f, barY, width * 0.27f, barY, paint);
+        canvas.drawLine(width * 0.73f, barY, width - 10f, barY, paint);
+
+        paint.setTypeface(Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD));
+        paint.setTextSize(15f);
+        Paint.FontMetrics nameMetrics = paint.getFontMetrics();
+        float nameBaseline = height - 7f - nameMetrics.bottom;
+        canvas.drawText("HIDDEN TREASURES", width / 2f, nameBaseline, paint);
+
+        return bitmap;
+    }
+
+    private byte[] bitmapToTsplMono(Bitmap bitmap) {
+        int width = bitmap.getWidth();
+        int height = bitmap.getHeight();
+        int bytesPerRow = (width + 7) / 8;
+        byte[] data = new byte[bytesPerRow * height];
+
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                int pixel = bitmap.getPixel(x, y);
+                int r = Color.red(pixel);
+                int g = Color.green(pixel);
+                int b = Color.blue(pixel);
+                int luminance = (r * 299 + g * 587 + b * 114) / 1000;
+                if (luminance < 160) {
+                    int index = y * bytesPerRow + (x / 8);
+                    data[index] |= (byte) (0x80 >> (x % 8));
+                }
+            }
+        }
+        return data;
+    }
+
+    private void writeAscii(ByteArrayOutputStream out, String value) throws IOException {
+        out.write(value.getBytes(StandardCharsets.US_ASCII));
     }
 
     private synchronized void closeConnection() {
@@ -470,6 +606,12 @@ public class MainActivity extends Activity {
     @Override
     protected void onDestroy() {
         closeConnection();
+        if (receiverRegistered) {
+            try {
+                unregisterReceiver(bluetoothStateReceiver);
+            } catch (Exception ignored) {}
+            receiverRegistered = false;
+        }
         super.onDestroy();
     }
 
