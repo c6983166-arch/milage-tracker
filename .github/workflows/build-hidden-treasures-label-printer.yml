@@ -1,0 +1,39 @@
+name: Build Hidden Treasures Label Printer APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - agent/hidden-treasures-label-printer-v1.2
+    paths:
+      - 'ht-label-printer-v1.2/**'
+      - '.github/workflows/build-hidden-treasures-label-printer.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle 8.9
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Build debug APK
+        working-directory: ht-label-printer-v1.2
+        run: gradle --no-daemon assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Hidden-Treasures-Label-Printer-v1.2-APK
+          path: ht-label-printer-v1.2/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
