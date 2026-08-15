@@ -9,7 +9,7 @@
 
     <application
         android:allowBackup="true"
-        android:label="HT Label Printer"
+        android:label="Hidden Treasures Label Printer"
         android:icon="@drawable/ht_launcher_icon"
         android:roundIcon="@drawable/ht_launcher_icon"
         android:supportsRtl="true"
