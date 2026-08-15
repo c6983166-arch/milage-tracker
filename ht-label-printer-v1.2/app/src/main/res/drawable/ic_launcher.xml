@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Hidden Treasures yellow background -->
+    <path android:fillColor="#FADE10" android:pathData="M0,0H108V108H0Z" />
+
+    <!-- Large HT monogram -->
+    <path android:fillColor="#000000" android:pathData="M16,15H24V31H39V15H47V55H39V39H24V55H16Z" />
+    <path android:fillColor="#000000" android:pathData="M55,15H91V23H77V55H69V23H55Z" />
+
+    <!-- Brand divider -->
+    <path android:fillColor="#000000" android:pathData="M12,60H96V64H12Z" />
+
+    <!-- Black lower field -->
+    <path android:fillColor="#000000" android:pathData="M0,67H108V108H0Z" />
+
+    <!-- Printer body -->
+    <path android:fillColor="#FFFFFF" android:pathData="M24,69H84L90,76V90H18V76Z" />
+    <path android:fillColor="#D9D9D9" android:pathData="M24,69H84L88,75H20Z" />
+    <path android:fillColor="#000000" android:pathData="M30,73H78V79H30Z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M36,84H72V103H36Z" />
+    <path android:fillColor="#000000" android:pathData="M42,88H46V99H42ZM50,88H54V92H60V88H64V99H60V95H54V99H50ZM66,88H78V92H74V99H70V92H66Z" />
+</vector>
