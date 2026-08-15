@@ -47,7 +47,6 @@ jobs:
           p = Path('ht-label-printer-v1.2/app/src/main/res/drawable-nodpi/ht_launcher_icon.png')
           data = bytearray(p.read_bytes())
           assert len(data) == 13471, len(data)
-          # The GitHub blob differs from the locally decoded approved PNG by exactly one byte.
           data[402] = 0x47
           p.write_bytes(data)
           digest = hashlib.sha256(data).hexdigest()
@@ -57,24 +56,25 @@ jobs:
           assert data.startswith(b'\x89PNG\r\n\x1a\n')
           PY
           grep 'android:icon="@drawable/ht_launcher_icon"' ht-label-printer-v1.2/app/src/main/AndroidManifest.xml
+          grep 'android:label="Hidden Treasures Label Printer"' ht-label-printer-v1.2/app/src/main/AndroidManifest.xml
 
       - name: Set up Gradle 8.9
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
 
-      - name: Build v1.3.8 APK with explicit signing key
+      - name: Build v1.3.9 APK with explicit signing key
         working-directory: ht-label-printer-v1.2
         run: gradle --no-daemon assembleDebug
 
-      - name: Verify package identity, exact icon path, and exact icon bytes
+      - name: Verify renamed app, package, version, and exact icon bytes
         run: |
           APK=ht-label-printer-v1.2/app/build/outputs/apk/debug/app-debug.apk
           AAPT=$(find "$ANDROID_HOME/build-tools" -name aapt -type f | sort -V | tail -1)
           "$AAPT" dump badging "$APK" | tee /tmp/badging.txt
-          grep "package: name='com.hiddentreasures.htlabelprinter.stable' versionCode='12' versionName='1.3.8'" /tmp/badging.txt
+          grep "package: name='com.hiddentreasures.htlabelprinter.stable' versionCode='13' versionName='1.3.9'" /tmp/badging.txt
           grep "launchable-activity: name='com.hiddentreasures.labelprinter.MainActivityV133'" /tmp/badging.txt
-          grep -E "application: label='HT Label Printer' icon='res/drawable-nodpi-v4/ht_launcher_icon.png'" /tmp/badging.txt
+          grep -E "application: label='Hidden Treasures Label Printer' icon='res/drawable-nodpi-v4/ht_launcher_icon.png'" /tmp/badging.txt
           grep "sdkVersion:'26'" /tmp/badging.txt
           python3 - <<'PY'
           import zipfile, hashlib
@@ -108,6 +108,6 @@ jobs:
       - name: Upload verified APK
         uses: actions/upload-artifact@v4
         with:
-          name: Hidden-Treasures-Label-Printer-v1.3.8-VERIFIED-ICON-APK
+          name: Hidden-Treasures-Label-Printer-v1.3.9-RENAMED-APK
           path: ht-label-printer-v1.2/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
