@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - agent/hidden-treasures-label-printer-v1.3.3
+      - agent/hidden-treasures-label-printer-v1.3.2
     paths:
       - 'ht-label-printer-v1.2/**'
       - '.github/workflows/build-hidden-treasures-label-printer.yml'
@@ -22,30 +22,26 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Restore Hidden Treasures signing key
+      - name: Restore exact v1.3.2 signing key
         uses: actions/cache@v4
         with:
           path: ~/.android/debug.keystore
           key: hidden-treasures-label-printer-signing-key-v1
+          fail-on-cache-miss: true
 
-      - name: Ensure permanent signing key exists
-        run: |
-          mkdir -p "$HOME/.android"
-          if [ ! -f "$HOME/.android/debug.keystore" ]; then
-            keytool -genkeypair -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey -keypass android -dname "CN=Hidden Treasures Android,O=Hidden Treasures,C=US" -keyalg RSA -keysize 2048 -validity 10000
-          fi
-          test -f "$HOME/.android/debug.keystore"
+      - name: Require restored signing key
+        run: test -f "$HOME/.android/debug.keystore"
 
       - name: Set up Gradle 8.9
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
 
-      - name: Build debug APK
+      - name: Build v1.3.3 APK
         working-directory: ht-label-printer-v1.2
         run: gradle --no-daemon assembleDebug
 
-      - name: Verify package identity and install metadata
+      - name: Verify package identity and version
         run: |
           APK=ht-label-printer-v1.2/app/build/outputs/apk/debug/app-debug.apk
           AAPT=$(find "$ANDROID_HOME/build-tools" -name aapt -type f | sort -V | tail -1)
@@ -60,14 +56,16 @@ jobs:
           ZIPALIGN=$(find "$ANDROID_HOME/build-tools" -name zipalign -type f | sort -V | tail -1)
           "$ZIPALIGN" -c -P 16 -v 4 "$APK"
 
-      - name: Verify APK signature
+      - name: Verify exact v1.3.2 signing certificate
         run: |
+          APK=ht-label-printer-v1.2/app/build/outputs/apk/debug/app-debug.apk
           APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)
-          "$APKSIGNER" verify --verbose --print-certs ht-label-printer-v1.2/app/build/outputs/apk/debug/app-debug.apk
+          "$APKSIGNER" verify --verbose --print-certs "$APK" | tee /tmp/signature.txt
+          grep "V2 Signer: certificate SHA-256 digest: 6bbd4dc024c19bda7bd88953ae0c3603e1255901ee7e729b8129a1efb0f36328" /tmp/signature.txt
 
-      - name: Upload APK
+      - name: Upload verified APK
         uses: actions/upload-artifact@v4
         with:
-          name: Hidden-Treasures-Label-Printer-v1.3.3-APK
+          name: Hidden-Treasures-Label-Printer-v1.3.3-EXACT-SIGNER-APK
           path: ht-label-printer-v1.2/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
