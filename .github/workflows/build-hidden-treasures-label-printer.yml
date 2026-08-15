@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - agent/hidden-treasures-label-printer-v1.3.2
+      - agent/hidden-treasures-label-printer-v1.3.3
     paths:
       - 'ht-label-printer-v1.2/**'
       - '.github/workflows/build-hidden-treasures-label-printer.yml'
@@ -50,7 +50,8 @@ jobs:
           APK=ht-label-printer-v1.2/app/build/outputs/apk/debug/app-debug.apk
           AAPT=$(find "$ANDROID_HOME/build-tools" -name aapt -type f | sort -V | tail -1)
           "$AAPT" dump badging "$APK" | tee /tmp/badging.txt
-          grep "package: name='com.hiddentreasures.htlabelprinter' versionCode='6' versionName='1.3.2'" /tmp/badging.txt
+          grep "package: name='com.hiddentreasures.htlabelprinter' versionCode='7' versionName='1.3.3'" /tmp/badging.txt
+          grep "launchable-activity: name='com.hiddentreasures.labelprinter.MainActivityV133'" /tmp/badging.txt
           grep "sdkVersion:'26'" /tmp/badging.txt
 
       - name: Verify APK alignment
@@ -67,6 +68,6 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Hidden-Treasures-Label-Printer-v1.3.2-CLEAN-INSTALL-APK
+          name: Hidden-Treasures-Label-Printer-v1.3.3-APK
           path: ht-label-printer-v1.2/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
