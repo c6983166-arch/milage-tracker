@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - agent/hidden-treasures-label-printer-v1.2
+      - agent/hidden-treasures-label-printer-v1.3
     paths:
       - 'ht-label-printer-v1.2/**'
       - '.github/workflows/build-hidden-treasures-label-printer.yml'
@@ -39,6 +39,6 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Hidden-Treasures-Label-Printer-v1.2-APK
+          name: Hidden-Treasures-Label-Printer-v1.3-APK
           path: ht-label-printer-v1.2/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
