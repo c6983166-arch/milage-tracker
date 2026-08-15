@@ -31,6 +31,11 @@ jobs:
         working-directory: ht-label-printer-v1.2
         run: gradle --no-daemon assembleDebug
 
+      - name: Verify APK signature
+        run: |
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)
+          "$APKSIGNER" verify --verbose ht-label-printer-v1.2/app/build/outputs/apk/debug/app-debug.apk
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
