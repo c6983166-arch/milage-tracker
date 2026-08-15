@@ -1,0 +1,70 @@
+name: Build Chrome Site Cleaner v0.2
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - agent/chrome-site-cleaner-v0.2
+    paths:
+      - 'chrome-site-cleaner/**'
+      - '.github/workflows/build-chrome-site-cleaner-v0.2.yml'
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore
+        run: dotnet restore chrome-site-cleaner/ChromeSiteCleaner.csproj
+
+      - name: Publish Windows x64 single EXE
+        run: >-
+          dotnet publish chrome-site-cleaner/ChromeSiteCleaner.csproj
+          -c Release
+          -r win-x64
+          --self-contained true
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:PublishTrimmed=false
+          -o chrome-site-cleaner/publish
+
+      - name: Verify EXE exists
+        shell: pwsh
+        run: |
+          $exe = 'chrome-site-cleaner/publish/ChromeSiteCleaner.exe'
+          if (-not (Test-Path $exe)) { throw 'ChromeSiteCleaner.exe was not produced.' }
+          Get-Item $exe | Format-List Name,Length,FullName
+
+      - name: Package
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path chrome-site-cleaner/package | Out-Null
+          Copy-Item chrome-site-cleaner/publish/ChromeSiteCleaner.exe chrome-site-cleaner/package/Chrome_Site_Cleaner_v0.2_TEST.exe
+          @'
+          CHROME SITE CLEANER v0.2 TEST
+
+          1. Double-click Chrome_Site_Cleaner_v0.2_TEST.exe
+          2. Click SCAN HISTORY.
+          3. For your first test, select one unimportant website.
+          4. Close Chrome completely before deleting history.
+          5. Click DELETE SELECTED HISTORY.
+
+          This test version removes selected Chrome HISTORY only.
+          It does NOT delete cookies, saved passwords, autofill, or bookmarks.
+          Backups are stored under:
+          %LOCALAPPDATA%\ChromeSiteCleaner\Backups
+          '@ | Set-Content chrome-site-cleaner/package/README.txt
+
+      - name: Upload Windows build
+        uses: actions/upload-artifact@v4
+        with:
+          name: Chrome-Site-Cleaner-v0.2-TEST-Windows
+          path: chrome-site-cleaner/package/*
+          if-no-files-found: error
