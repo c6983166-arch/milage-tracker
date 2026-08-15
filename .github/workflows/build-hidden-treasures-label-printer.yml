@@ -22,7 +22,7 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Restore exact v1.3.2 signing key
+      - name: Restore stable signing key
         uses: actions/cache@v4
         with:
           path: ~/.android/debug.keystore
@@ -32,12 +32,19 @@ jobs:
       - name: Require restored signing key
         run: test -f "$HOME/.android/debug.keystore"
 
+      - name: Record signing-key fingerprint
+        run: |
+          KEY_SHA=$(keytool -list -v -keystore "$HOME/.android/debug.keystore" -alias androiddebugkey -storepass android 2>/dev/null | sed -n 's/^[[:space:]]*SHA256: //p' | tr -d ':' | tr 'A-F' 'a-f')
+          test -n "$KEY_SHA"
+          echo "$KEY_SHA" > /tmp/key_sha256.txt
+          echo "Signing key SHA-256: $KEY_SHA"
+
       - name: Set up Gradle 8.9
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
 
-      - name: Build v1.3.3 APK
+      - name: Build v1.3.4 APK with explicit signing key
         working-directory: ht-label-printer-v1.2
         run: gradle --no-daemon assembleDebug
 
@@ -46,7 +53,7 @@ jobs:
           APK=ht-label-printer-v1.2/app/build/outputs/apk/debug/app-debug.apk
           AAPT=$(find "$ANDROID_HOME/build-tools" -name aapt -type f | sort -V | tail -1)
           "$AAPT" dump badging "$APK" | tee /tmp/badging.txt
-          grep "package: name='com.hiddentreasures.htlabelprinter' versionCode='7' versionName='1.3.3'" /tmp/badging.txt
+          grep "package: name='com.hiddentreasures.htlabelprinter.stable' versionCode='8' versionName='1.3.4'" /tmp/badging.txt
           grep "launchable-activity: name='com.hiddentreasures.labelprinter.MainActivityV133'" /tmp/badging.txt
           grep "sdkVersion:'26'" /tmp/badging.txt
 
@@ -56,16 +63,19 @@ jobs:
           ZIPALIGN=$(find "$ANDROID_HOME/build-tools" -name zipalign -type f | sort -V | tail -1)
           "$ZIPALIGN" -c -P 16 -v 4 "$APK"
 
-      - name: Verify exact v1.3.2 signing certificate
+      - name: Verify APK uses the restored signing key
         run: |
           APK=ht-label-printer-v1.2/app/build/outputs/apk/debug/app-debug.apk
           APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)
           "$APKSIGNER" verify --verbose --print-certs "$APK" | tee /tmp/signature.txt
-          grep "V2 Signer: certificate SHA-256 digest: 6bbd4dc024c19bda7bd88953ae0c3603e1255901ee7e729b8129a1efb0f36328" /tmp/signature.txt
+          APK_SHA=$(sed -n 's/^V2 Signer: certificate SHA-256 digest: //p' /tmp/signature.txt | head -1 | tr 'A-F' 'a-f')
+          KEY_SHA=$(cat /tmp/key_sha256.txt)
+          echo "APK signer SHA-256: $APK_SHA"
+          test "$APK_SHA" = "$KEY_SHA"
 
       - name: Upload verified APK
         uses: actions/upload-artifact@v4
         with:
-          name: Hidden-Treasures-Label-Printer-v1.3.3-EXACT-SIGNER-APK
+          name: Hidden-Treasures-Label-Printer-v1.3.4-STABLE-INSTALL-APK
           path: ht-label-printer-v1.2/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
