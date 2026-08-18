@@ -52,7 +52,9 @@ jobs:
 
       - name: Apply approved Miles Tracker update
         shell: bash
-        run: python3 premium_patch.py
+        run: |
+          python3 premium_patch.py
+          python3 v15_patch.py
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v4
