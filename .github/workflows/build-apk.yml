@@ -3,7 +3,7 @@ name: Build Android APK
 on:
   workflow_dispatch:
   push:
-    branches: [ main, miles-tracker-v1-5-update ]
+    branches: [ main ]
   pull_request:
     branches: [ main ]
 
@@ -72,20 +72,20 @@ jobs:
         run: gradle --no-daemon :app:assembleDebug
 
       - name: Rename APK
-        run: cp app/build/outputs/apk/debug/app-debug.apk Bailey_Anns_Miles_Tracker_v1.5_MANUAL_BRAND_UPDATE.apk
+        run: cp app/build/outputs/apk/debug/app-debug.apk Bailey_Anns_Miles_Tracker_v1.5.1_ICON_FIX.apk
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v7
         with:
-          name: Bailey_Anns_Miles_Tracker_v1.5_MANUAL_BRAND_UPDATE
-          path: Bailey_Anns_Miles_Tracker_v1.5_MANUAL_BRAND_UPDATE.apk
+          name: Bailey_Anns_Miles_Tracker_v1.5.1_ICON_FIX
+          path: Bailey_Anns_Miles_Tracker_v1.5.1_ICON_FIX.apk
           if-no-files-found: error
 
       - name: Publish verified APK release
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: miles-tracker-v1.5
-          name: Bailey Ann's Miles Tracker v1.5
-          body: Manual START/END trip tracking, approved Bailey Ann's branding, and branded PDF mileage report.
-          files: Bailey_Anns_Miles_Tracker_v1.5_MANUAL_BRAND_UPDATE.apk
+          tag_name: miles-tracker-v1.5.1
+          name: Bailey Ann's Miles Tracker v1.5.1
+          body: Icon-only fix. Uses the approved BA-I1 Navy/Gold App Icon. App functionality remains unchanged from v1.5.
+          files: Bailey_Anns_Miles_Tracker_v1.5.1_ICON_FIX.apk
