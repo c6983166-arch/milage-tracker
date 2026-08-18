@@ -58,12 +58,18 @@ jobs:
           test "$(wc -c < app/src/main/res/drawable-nodpi/ba_l2_shiny_gold_logo.webp)" -eq 37160
           sha256sum app/src/main/res/drawable-nodpi/ba_l2_shiny_gold_logo.webp
 
-      - name: Apply approved Miles Tracker update
+      - name: Apply Miles Tracker updates
         shell: bash
         run: |
           python3 premium_patch.py
           python3 v15_patch.py
           python3 v153_patch.py
+          python3 v160_patch.py
+          python3 v161_pairing_fix.py
+          python3 v162_escape_fix.py
+          python3 v163_manual_connection.py
+          python3 v164_elegant_update.py
+          python3 v165_restore_send.py
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v4
@@ -79,20 +85,20 @@ jobs:
         run: gradle --no-daemon :app:assembleDebug
 
       - name: Rename APK
-        run: cp app/build/outputs/apk/debug/app-debug.apk Bailey_Anns_Miles_Tracker_v1.5.3_APPROVED_EDITS.apk
+        run: cp app/build/outputs/apk/debug/app-debug.apk Bailey_Anns_Miles_Tracker_v1.6.3_ELEGANT_UPDATE.apk
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v7
         with:
-          name: Bailey_Anns_Miles_Tracker_v1.5.3_APPROVED_EDITS
-          path: Bailey_Anns_Miles_Tracker_v1.5.3_APPROVED_EDITS.apk
+          name: Bailey_Anns_Miles_Tracker_v1.6.3_ELEGANT_UPDATE
+          path: Bailey_Anns_Miles_Tracker_v1.6.3_ELEGANT_UPDATE.apk
           if-no-files-found: error
 
       - name: Publish verified APK release
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: miles-tracker-v1.5.3
-          name: Bailey Ann's Miles Tracker v1.5.3
-          body: Business Manager sync is optional for Estate Miles. Manual Estate/Client entry is supported. BA-L2 Shiny Gold Logo is used on all app pages with a transparent background over Bailey Navy.
-          files: Bailey_Anns_Miles_Tracker_v1.5.3_APPROVED_EDITS.apk
+          tag_name: miles-tracker-v1.6.3
+          name: Bailey Ann's Miles Tracker v1.6.3
+          body: Elegant professional cream, navy and gold Miles Tracker refresh using approved Bailey Ann's brand assets, simplified field workflow, optional Estate assignment at trip end, and preserved Business Manager manual connection and sync.
+          files: Bailey_Anns_Miles_Tracker_v1.6.3_ELEGANT_UPDATE.apk
