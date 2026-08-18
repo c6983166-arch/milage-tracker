@@ -72,20 +72,20 @@ jobs:
         run: gradle --no-daemon :app:assembleDebug
 
       - name: Rename APK
-        run: cp app/build/outputs/apk/debug/app-debug.apk Bailey_Anns_Miles_Tracker_v1.5.1_ICON_FIX.apk
+        run: cp app/build/outputs/apk/debug/app-debug.apk Bailey_Anns_Miles_Tracker_v1.5.2_WORKSHEET_ICON.apk
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v7
         with:
-          name: Bailey_Anns_Miles_Tracker_v1.5.1_ICON_FIX
-          path: Bailey_Anns_Miles_Tracker_v1.5.1_ICON_FIX.apk
+          name: Bailey_Anns_Miles_Tracker_v1.5.2_WORKSHEET_ICON
+          path: Bailey_Anns_Miles_Tracker_v1.5.2_WORKSHEET_ICON.apk
           if-no-files-found: error
 
       - name: Publish verified APK release
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: miles-tracker-v1.5.1
-          name: Bailey Ann's Miles Tracker v1.5.1
-          body: Icon-only fix. Uses the approved BA-I1 Navy/Gold App Icon. App functionality remains unchanged from v1.5.
-          files: Bailey_Anns_Miles_Tracker_v1.5.1_ICON_FIX.apk
+          tag_name: miles-tracker-v1.5.2
+          name: Bailey Ann's Miles Tracker v1.5.2
+          body: Launcher icon corrected from the approved Miles Tracker worksheet using BA-I1 Navy/Gold App Icon. No functional app changes.
+          files: Bailey_Anns_Miles_Tracker_v1.5.2_WORKSHEET_ICON.apk
