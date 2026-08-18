@@ -3,7 +3,7 @@ name: Build Android APK
 on:
   workflow_dispatch:
   push:
-    branches: [ main ]
+    branches: [ main, miles-tracker-v1-5-update ]
 
 permissions:
   contents: read
@@ -41,31 +41,18 @@ jobs:
               -dname "CN=Android Debug,O=Android,C=US"
           fi
 
-      - name: Apply approved premium layout
+      - name: Restore approved Bailey Ann's brand assets
         shell: bash
         run: |
-          python3 premium_patch.py
-          python3 - <<'PY'
-          from pathlib import Path
-          p=Path('app/build.gradle')
-          s=p.read_text()
-          s=s.replace("applicationId 'com.baileyanns.mileage.v13'","applicationId 'com.baileyanns.mileage.v14'")
-          s=s.replace('versionCode 3','versionCode 5')
-          s=s.replace("versionName '1.2'","versionName '1.4'")
-          p.write_text(s)
-          x=Path('app/src/main/res/values/strings.xml')
-          t=x.read_text().replace("Bailey Ann\\'s Mileage Tracker v1.3","Bailey Ann\\'s Miles Tracker v1.4")
-          x.write_text(t)
-          PY
+          mkdir -p app/src/main/res/drawable-nodpi
+          base64 -d brand_assets/ba_l2_shiny_gold_logo.b64 > app/src/main/res/drawable-nodpi/ba_l2_shiny_gold_logo.webp
+          base64 -d brand_assets/ba_i1_navy_gold_app_icon.b64 > app/src/main/res/drawable-nodpi/ba_i1_navy_gold_app_icon.webp
+          test -s app/src/main/res/drawable-nodpi/ba_l2_shiny_gold_logo.webp
+          test -s app/src/main/res/drawable-nodpi/ba_i1_navy_gold_app_icon.webp
 
-      - name: Render approved Miles Tracker icon
+      - name: Apply approved Miles Tracker update
         shell: bash
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq librsvg2-bin
-          rm -f app/src/main/res/drawable-nodpi/miles_tracker_icon.webp
-          rsvg-convert -w 512 -h 512 premium_icon.svg -o app/src/main/res/drawable-nodpi/miles_tracker_icon.png
-          test -s app/src/main/res/drawable-nodpi/miles_tracker_icon.png
+        run: python3 premium_patch.py
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v4
@@ -81,11 +68,11 @@ jobs:
         run: gradle --no-daemon :app:assembleDebug
 
       - name: Rename APK
-        run: cp app/build/outputs/apk/debug/app-debug.apk Bailey_Anns_Miles_Tracker_v1.4_OPTION_3.apk
+        run: cp app/build/outputs/apk/debug/app-debug.apk Bailey_Anns_Miles_Tracker_v1.5_MANUAL_BRAND_UPDATE.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v7
         with:
-          name: Bailey_Anns_Miles_Tracker_v1.4_OPTION_3
-          path: Bailey_Anns_Miles_Tracker_v1.4_OPTION_3.apk
+          name: Bailey_Anns_Miles_Tracker_v1.5_MANUAL_BRAND_UPDATE
+          path: Bailey_Anns_Miles_Tracker_v1.5_MANUAL_BRAND_UPDATE.apk
           if-no-files-found: error
