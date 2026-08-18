@@ -43,20 +43,20 @@ jobs:
               -dname "CN=Android Debug,O=Android,C=US"
           fi
 
-      - name: Restore approved Bailey Ann's brand assets
+      - name: Restore approved Bailey Ann's app icon
         shell: bash
         run: |
           mkdir -p app/src/main/res/drawable-nodpi
-          base64 -d brand_assets/ba_l2_shiny_gold_logo.b64 > app/src/main/res/drawable-nodpi/ba_l2_shiny_gold_logo.webp
           base64 -d brand_assets/ba_i1_navy_gold_app_icon.b64 > app/src/main/res/drawable-nodpi/ba_i1_navy_gold_app_icon.webp
-          test -s app/src/main/res/drawable-nodpi/ba_l2_shiny_gold_logo.webp
           test -s app/src/main/res/drawable-nodpi/ba_i1_navy_gold_app_icon.webp
+          test -s app/src/main/res/drawable-nodpi/ba_l2_shiny_gold_logo.webp
 
       - name: Apply approved Miles Tracker update
         shell: bash
         run: |
           python3 premium_patch.py
           python3 v15_patch.py
+          python3 v153_patch.py
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v4
@@ -72,20 +72,20 @@ jobs:
         run: gradle --no-daemon :app:assembleDebug
 
       - name: Rename APK
-        run: cp app/build/outputs/apk/debug/app-debug.apk Bailey_Anns_Miles_Tracker_v1.5.2_WORKSHEET_ICON.apk
+        run: cp app/build/outputs/apk/debug/app-debug.apk Bailey_Anns_Miles_Tracker_v1.5.3_SYNC_OPTIONAL_TRANSPARENT_LOGO.apk
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v7
         with:
-          name: Bailey_Anns_Miles_Tracker_v1.5.2_WORKSHEET_ICON
-          path: Bailey_Anns_Miles_Tracker_v1.5.2_WORKSHEET_ICON.apk
+          name: Bailey_Anns_Miles_Tracker_v1.5.3_SYNC_OPTIONAL_TRANSPARENT_LOGO
+          path: Bailey_Anns_Miles_Tracker_v1.5.3_SYNC_OPTIONAL_TRANSPARENT_LOGO.apk
           if-no-files-found: error
 
       - name: Publish verified APK release
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: miles-tracker-v1.5.2
-          name: Bailey Ann's Miles Tracker v1.5.2
-          body: Launcher icon corrected from the approved Miles Tracker worksheet using BA-I1 Navy/Gold App Icon. No functional app changes.
-          files: Bailey_Anns_Miles_Tracker_v1.5.2_WORKSHEET_ICON.apk
+          tag_name: miles-tracker-v1.5.3
+          name: Bailey Ann's Miles Tracker v1.5.3
+          body: Business Manager sync is optional for Estate Miles. Manual Estate/Client entry is available. BA-L2 shiny gold logo uses a transparent background on navy screens. Launcher icon remains the worksheet-selected BA-I1 icon.
+          files: Bailey_Anns_Miles_Tracker_v1.5.3_SYNC_OPTIONAL_TRANSPARENT_LOGO.apk
