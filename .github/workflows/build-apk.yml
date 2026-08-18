@@ -43,13 +43,20 @@ jobs:
               -dname "CN=Android Debug,O=Android,C=US"
           fi
 
-      - name: Restore approved Bailey Ann's app icon
+      - name: Restore approved Bailey Ann's brand assets
         shell: bash
         run: |
           mkdir -p app/src/main/res/drawable-nodpi
+          base64 -d brand_assets/ba_l2_shiny_gold_logo.b64 > app/src/main/res/drawable-nodpi/ba_l2_shiny_gold_logo.webp
           base64 -d brand_assets/ba_i1_navy_gold_app_icon.b64 > app/src/main/res/drawable-nodpi/ba_i1_navy_gold_app_icon.webp
-          test -s app/src/main/res/drawable-nodpi/ba_i1_navy_gold_app_icon.webp
           test -s app/src/main/res/drawable-nodpi/ba_l2_shiny_gold_logo.webp
+          test -s app/src/main/res/drawable-nodpi/ba_i1_navy_gold_app_icon.webp
+
+      - name: Make BA-L2 background transparent
+        shell: bash
+        run: |
+          python3 -m pip install --disable-pip-version-check --quiet pillow
+          python3 make_logo_transparent.py
 
       - name: Apply approved Miles Tracker update
         shell: bash
@@ -57,6 +64,23 @@ jobs:
           python3 premium_patch.py
           python3 v15_patch.py
           python3 v153_patch.py
+
+      - name: Verify requested v1.5.3 edits
+        shell: bash
+        run: |
+          grep -q 'Business Manager sync is optional' app/src/main/java/com/baileyanns/mileage/MainActivity.java
+          if grep -q 'Sync the Estate list from Business Manager first' app/src/main/java/com/baileyanns/mileage/MainActivity.java; then
+            echo 'Old required-sync message is still present.' >&2
+            exit 1
+          fi
+          if grep -q 'logo.setBackgroundColor(Color.WHITE)' app/src/main/java/com/baileyanns/mileage/MainActivity.java; then
+            echo 'White logo background remains in MainActivity.' >&2
+            exit 1
+          fi
+          if grep -q 'logo.setBackgroundColor(WHITE)' app/src/main/java/com/baileyanns/mileage/PremiumUi.java; then
+            echo 'White logo background remains in PremiumUi.' >&2
+            exit 1
+          fi
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v4
@@ -87,5 +111,5 @@ jobs:
         with:
           tag_name: miles-tracker-v1.5.3
           name: Bailey Ann's Miles Tracker v1.5.3
-          body: Business Manager sync is optional for Estate Miles. Manual Estate/Client entry is available. BA-L2 shiny gold logo uses a transparent background on navy screens. Launcher icon remains the worksheet-selected BA-I1 icon.
+          body: Business Manager sync is optional for Estate Miles, with manual Estate/Client entry available. The existing BA-L2 shiny gold artwork is preserved while its background is made transparent so it blends into Bailey Navy screens. Launcher icon remains the worksheet-selected BA-I1 icon.
           files: Bailey_Anns_Miles_Tracker_v1.5.3_SYNC_OPTIONAL_TRANSPARENT_LOGO.apk
