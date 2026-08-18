@@ -25,7 +25,7 @@ s = replace_between(s, '    private void showSettings(){', '    private void cho
 
         root.addView(button("SAVE PAIRING CODE",v->{
             String value=code.getText().toString().trim();
-            if(!value.matches("\\\\d{6}")){toast("Enter the 6-digit pairing code shown in Business Manager.");return;}
+            if(!value.matches("\\d{6}")){toast("Enter the 6-digit pairing code shown in Business Manager.");return;}
             boolean ok=Prefs.get(this).edit().putString("pairing_code",value).commit();
             if(ok){saved.setText("Saved code: "+value);toast("Pairing code saved.");}
             else toast("Pairing code could not be saved. Try again.");
@@ -33,7 +33,7 @@ s = replace_between(s, '    private void showSettings(){', '    private void cho
         root.addView(space(8));
         root.addView(button("SYNC ESTATES NOW",v->{
             String value=code.getText().toString().trim();
-            if(!value.matches("\\\\d{6}")){toast("Save the 6-digit pairing code first.");return;}
+            if(!value.matches("\\d{6}")){toast("Save the 6-digit pairing code first.");return;}
             if(!value.equals(Prefs.pairingCode(this))){
                 boolean ok=Prefs.get(this).edit().putString("pairing_code",value).commit();
                 if(!ok){toast("Pairing code could not be saved.");return;}
@@ -54,3 +54,7 @@ s = replace_between(s, '    private void showSettings(){', '    private void cho
 
 ''')
 p.write_text(s)
+
+b = Path('app/build.gradle')
+z = b.read_text().replace("versionCode 10", "versionCode 11", 1).replace("versionName '1.6.0'", "versionName '1.6.1'", 1)
+b.write_text(z)
