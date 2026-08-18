@@ -58,13 +58,14 @@ jobs:
           test "$(wc -c < app/src/main/res/drawable-nodpi/ba_l2_shiny_gold_logo.webp)" -eq 37160
           sha256sum app/src/main/res/drawable-nodpi/ba_l2_shiny_gold_logo.webp
 
-      - name: Apply approved Miles Tracker updates
+      - name: Apply Miles Tracker updates
         shell: bash
         run: |
           python3 premium_patch.py
           python3 v15_patch.py
           python3 v153_patch.py
           python3 v160_patch.py
+          python3 v161_pairing_fix.py
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v4
@@ -80,20 +81,20 @@ jobs:
         run: gradle --no-daemon :app:assembleDebug
 
       - name: Rename APK
-        run: cp app/build/outputs/apk/debug/app-debug.apk Bailey_Anns_Miles_Tracker_v1.6.0_TRIAL.apk
+        run: cp app/build/outputs/apk/debug/app-debug.apk Bailey_Anns_Miles_Tracker_v1.6.1_PAIRING_FIX.apk
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v7
         with:
-          name: Bailey_Anns_Miles_Tracker_v1.6.0_TRIAL
-          path: Bailey_Anns_Miles_Tracker_v1.6.0_TRIAL.apk
+          name: Bailey_Anns_Miles_Tracker_v1.6.1_PAIRING_FIX
+          path: Bailey_Anns_Miles_Tracker_v1.6.1_PAIRING_FIX.apk
           if-no-files-found: error
 
       - name: Publish verified APK release
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: miles-tracker-v1.6.0
-          name: Bailey Ann's Miles Tracker v1.6.0
-          body: Manual START TRIP / END TRIP flow. Estate selection is optional after the trip and uses the synced Business Manager estate list. Odometer entry has been removed. Trips can be reviewed, edited, saved for later, or sent directly to Business Manager with Not Sent / Synced status.
-          files: Bailey_Anns_Miles_Tracker_v1.6.0_TRIAL.apk
+          tag_name: miles-tracker-v1.6.1
+          name: Bailey Ann's Miles Tracker v1.6.1
+          body: Separates pairing-code saving from Estate sync and gives immediate confirmation when the six-digit Business Manager code is saved.
+          files: Bailey_Anns_Miles_Tracker_v1.6.1_PAIRING_FIX.apk
