@@ -1,1 +1,0 @@
-BA-L2 shiny gold logo for v1.5.3 is packaged as a transparent WebP in drawable-nodpi so it blends directly into Bailey Navy screens. Do not add a white ImageView background.
