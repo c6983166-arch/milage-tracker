@@ -66,6 +66,7 @@ jobs:
           python3 v153_patch.py
           python3 v160_patch.py
           python3 v161_pairing_fix.py
+          python3 v162_escape_fix.py
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v4
