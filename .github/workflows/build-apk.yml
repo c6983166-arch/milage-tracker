@@ -68,6 +68,7 @@ jobs:
           python3 v161_pairing_fix.py
           python3 v162_escape_fix.py
           python3 v163_manual_connection.py
+          python3 v164_elegant_update.py
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v4
@@ -83,20 +84,20 @@ jobs:
         run: gradle --no-daemon :app:assembleDebug
 
       - name: Rename APK
-        run: cp app/build/outputs/apk/debug/app-debug.apk Bailey_Anns_Miles_Tracker_v1.6.2_MANUAL_CONNECT.apk
+        run: cp app/build/outputs/apk/debug/app-debug.apk Bailey_Anns_Miles_Tracker_v1.6.3_ELEGANT_UPDATE.apk
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v7
         with:
-          name: Bailey_Anns_Miles_Tracker_v1.6.2_MANUAL_CONNECT
-          path: Bailey_Anns_Miles_Tracker_v1.6.2_MANUAL_CONNECT.apk
+          name: Bailey_Anns_Miles_Tracker_v1.6.3_ELEGANT_UPDATE
+          path: Bailey_Anns_Miles_Tracker_v1.6.3_ELEGANT_UPDATE.apk
           if-no-files-found: error
 
       - name: Publish verified APK release
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: miles-tracker-v1.6.2
-          name: Bailey Ann's Miles Tracker v1.6.2
-          body: Adds manual Business Manager address connection when Wi-Fi broadcast discovery is blocked, while keeping automatic discovery available.
-          files: Bailey_Anns_Miles_Tracker_v1.6.2_MANUAL_CONNECT.apk
+          tag_name: miles-tracker-v1.6.3
+          name: Bailey Ann's Miles Tracker v1.6.3
+          body: Elegant professional cream, navy and gold Miles Tracker refresh using approved Bailey Ann's brand assets, simplified field workflow, optional Estate assignment at trip end, and preserved Business Manager manual connection and sync.
+          files: Bailey_Anns_Miles_Tracker_v1.6.3_ELEGANT_UPDATE.apk
