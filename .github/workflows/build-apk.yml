@@ -69,6 +69,7 @@ jobs:
           python3 v162_escape_fix.py
           python3 v163_manual_connection.py
           python3 v164_elegant_update.py
+          python3 v165_restore_send.py
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v4
