@@ -8,7 +8,7 @@ on:
     branches: [ main ]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -74,9 +74,18 @@ jobs:
       - name: Rename APK
         run: cp app/build/outputs/apk/debug/app-debug.apk Bailey_Anns_Miles_Tracker_v1.5_MANUAL_BRAND_UPDATE.apk
 
-      - name: Upload APK
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v7
         with:
           name: Bailey_Anns_Miles_Tracker_v1.5_MANUAL_BRAND_UPDATE
           path: Bailey_Anns_Miles_Tracker_v1.5_MANUAL_BRAND_UPDATE.apk
           if-no-files-found: error
+
+      - name: Publish verified APK release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: miles-tracker-v1.5
+          name: Bailey Ann's Miles Tracker v1.5
+          body: Manual START/END trip tracking, approved Bailey Ann's branding, and branded PDF mileage report.
+          files: Bailey_Anns_Miles_Tracker_v1.5_MANUAL_BRAND_UPDATE.apk
