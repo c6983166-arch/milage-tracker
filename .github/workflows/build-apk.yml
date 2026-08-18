@@ -4,6 +4,8 @@ on:
   workflow_dispatch:
   push:
     branches: [ main, miles-tracker-v1-5-update ]
+  pull_request:
+    branches: [ main ]
 
 permissions:
   contents: read
