@@ -7,20 +7,121 @@ import android.os.ParcelFileDescriptor;
 import android.print.*;
 
 import java.io.*;
+import java.text.SimpleDateFormat;
 import java.util.*;
 
 public final class YearEndReport {
+    private static final int NAVY=Color.rgb(6,26,67);
+    private static final int GOLD=Color.rgb(217,188,0);
+    private static final int LIGHT=Color.rgb(246,247,250);
+    private static final int TEXT=Color.rgb(35,39,48);
+
     public static File create(Context c,int year,List<DatabaseHelper.Trip> trips)throws Exception{
-        File f=new File(c.getCacheDir(),"Bailey_Anns_Mileage_Report_"+year+".pdf"); PdfDocument pdf=new PdfDocument(); Paint p=new Paint(Paint.ANTI_ALIAS_FLAG); int pageNo=1,y=0; PdfDocument.Page page=null; Canvas canvas=null;
-        double estate=0,business=0; for(DatabaseHelper.Trip t:trips){ if("ESTATE".equals(t.tripType))estate+=t.miles;else business+=t.miles; }
-        for(int idx=-1;idx<trips.size();idx++){
-            if(page==null || y>730){ if(page!=null)pdf.finishPage(page); PdfDocument.PageInfo info=new PdfDocument.PageInfo.Builder(612,792,pageNo++).create(); page=pdf.startPage(info); canvas=page.getCanvas(); y=50; p.setColor(Color.rgb(6,26,67));p.setTextSize(20);p.setTypeface(Typeface.DEFAULT_BOLD);canvas.drawText("BAILEY ANN'S ESTATE SOLUTIONS LLC",36,y,p);y+=25;p.setTextSize(16);canvas.drawText("YEAR-END BUSINESS MILEAGE REPORT — "+year,36,y,p);y+=26; p.setColor(Color.DKGRAY);p.setTextSize(10);p.setTypeface(Typeface.DEFAULT); }
-            if(idx==-1){ p.setTextSize(12);p.setTypeface(Typeface.DEFAULT_BOLD);canvas.drawText(String.format(Locale.US,"Estate Miles: %.1f",estate),36,y,p);canvas.drawText(String.format(Locale.US,"Business Miles: %.1f",business),210,y,p);canvas.drawText(String.format(Locale.US,"Total: %.1f",estate+business),390,y,p);y+=28; p.setTextSize(9);p.setTypeface(Typeface.DEFAULT_BOLD);canvas.drawText("DATE",36,y,p);canvas.drawText("TYPE / ESTATE",95,y,p);canvas.drawText("PURPOSE",250,y,p);canvas.drawText("ODOMETER",410,y,p);canvas.drawText("MILES",548,y,p);y+=14;canvas.drawLine(36,y,576,y,p);y+=14; continue; }
-            DatabaseHelper.Trip t=trips.get(idx); p.setTextSize(8.2f);p.setTypeface(Typeface.DEFAULT);p.setColor(Color.DKGRAY); canvas.drawText(s(t.date,16),36,y,p);String type="ESTATE".equals(t.tripType)?"Estate • "+t.estateName:"Business";canvas.drawText(s(type,27),95,y,p);canvas.drawText(s(t.purpose,28),250,y,p);String odo=(t.startOdometer>0||t.endOdometer>0)?String.format(Locale.US,"%s-%s",t.startOdometer>0?String.format(Locale.US,"%.0f",t.startOdometer):"—",t.endOdometer>0?String.format(Locale.US,"%.0f",t.endOdometer):"—"):"";canvas.drawText(s(odo,18),410,y,p);canvas.drawText(String.format(Locale.US,"%.1f",t.miles),548,y,p);y+=16;
-        }
-        if(page!=null)pdf.finishPage(page); try(FileOutputStream out=new FileOutputStream(f)){pdf.writeTo(out);} finally {pdf.close();} return f;
+        File f=new File(c.getCacheDir(),"Bailey_Anns_Miles_Tracker_Report_"+year+".pdf");
+        PdfDocument pdf=new PdfDocument();
+        Paint p=new Paint(Paint.ANTI_ALIAS_FLAG);
+        double estate=0,business=0;
+        for(DatabaseHelper.Trip t:trips){if("ESTATE".equals(t.tripType))estate+=t.miles;else business+=t.miles;}
+        int pageNo=1,index=0;
+        do{
+            PdfDocument.PageInfo info=new PdfDocument.PageInfo.Builder(612,792,pageNo++).create();
+            PdfDocument.Page page=pdf.startPage(info);
+            Canvas canvas=page.getCanvas();
+            canvas.drawColor(Color.WHITE);
+            drawHeader(c,canvas,p,year,pageNo-1);
+            int y=178;
+            if(index==0){
+                drawSummary(canvas,p,estate,business,estate+business,trips.size());
+                y=300;
+                drawTableHeader(canvas,p,y);
+                y+=28;
+            }else{
+                drawTableHeader(canvas,p,y);
+                y+=28;
+            }
+            while(index<trips.size() && y<705){drawTripRow(canvas,p,trips.get(index++),y);y+=34;}
+            drawFooter(canvas,p,pageNo-1);
+            pdf.finishPage(page);
+        }while(index<trips.size() || (trips.isEmpty() && pageNo==2));
+        try(FileOutputStream out=new FileOutputStream(f)){pdf.writeTo(out);}finally{pdf.close();}
+        return f;
     }
-    public static void print(Context c,File file,int year){ PrintManager pm=(PrintManager)c.getSystemService(Context.PRINT_SERVICE); pm.print("Bailey Ann's Mileage Report "+year,new FileAdapter(file),new PrintAttributes.Builder().setMediaSize(PrintAttributes.MediaSize.NA_LETTER).build()); }
-    private static class FileAdapter extends PrintDocumentAdapter{ private final File file; FileAdapter(File f){file=f;} @Override public void onLayout(PrintAttributes oldA,PrintAttributes newA,android.os.CancellationSignal cs,LayoutResultCallback cb,android.os.Bundle extras){cb.onLayoutFinished(new PrintDocumentInfo.Builder(file.getName()).setContentType(PrintDocumentInfo.CONTENT_TYPE_DOCUMENT).build(),true);} @Override public void onWrite(android.print.PageRange[] pages,ParcelFileDescriptor dest,android.os.CancellationSignal cs,WriteResultCallback cb){try(FileInputStream in=new FileInputStream(file);FileOutputStream out=new FileOutputStream(dest.getFileDescriptor())){byte[] b=new byte[8192];int n;while((n=in.read(b))>0)out.write(b,0,n);cb.onWriteFinished(new android.print.PageRange[]{android.print.PageRange.ALL_PAGES});}catch(Exception e){cb.onWriteFailed(e.getMessage());}} }
-    private static String s(String x,int max){if(x==null)return "";return x.length()<=max?x:x.substring(0,Math.max(1,max-1))+"…";} private YearEndReport(){}
+
+    private static void drawHeader(Context c,Canvas canvas,Paint p,int year,int page){
+        Bitmap logo=BitmapFactory.decodeResource(c.getResources(),R.drawable.ba_l2_shiny_gold_logo);
+        if(logo!=null){
+            Rect src=new Rect(0,0,logo.getWidth(),logo.getHeight());
+            RectF dst=new RectF(36,28,286,130);
+            p.setFilterBitmap(true);
+            canvas.drawBitmap(logo,src,dst,p);
+        }
+        p.setTypeface(Typeface.DEFAULT_BOLD);p.setColor(NAVY);p.setTextSize(18);
+        canvas.drawText("MILES TRACKER REPORT",330,55,p);
+        p.setTypeface(Typeface.DEFAULT);p.setTextSize(10);p.setColor(TEXT);
+        canvas.drawText("Tax Year: "+year,330,78,p);
+        canvas.drawText("Report Date: "+new SimpleDateFormat("MMM d, yyyy",Locale.US).format(new Date()),330,96,p);
+        canvas.drawText("Generated By: Bailey Ann's Miles Tracker",330,114,p);
+        p.setColor(GOLD);p.setStrokeWidth(2);canvas.drawLine(36,145,576,145,p);
+    }
+
+    private static void drawSummary(Canvas c,Paint p,double estate,double business,double total,int trips){
+        p.setColor(NAVY);p.setTypeface(Typeface.DEFAULT_BOLD);p.setTextSize(12);c.drawText("SUMMARY",36,172,p);
+        String[] labels={"ESTATE MILES","BUSINESS MILES","TOTAL MILES","TOTAL TRIPS"};
+        String[] values={fmt(estate),fmt(business),fmt(total),String.valueOf(trips)};
+        for(int i=0;i<4;i++){
+            float left=36+i*137f,right=left+125,top=188,bottom=260;
+            p.setColor(LIGHT);p.setStyle(Paint.Style.FILL);c.drawRoundRect(new RectF(left,top,right,bottom),8,8,p);
+            p.setColor(GOLD);p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(1.5f);c.drawRoundRect(new RectF(left,top,right,bottom),8,8,p);
+            p.setStyle(Paint.Style.FILL);p.setColor(NAVY);p.setTypeface(Typeface.DEFAULT_BOLD);p.setTextSize(9);c.drawText(labels[i],left+10,211,p);
+            p.setTextSize(21);c.drawText(values[i],left+10,241,p);
+        }
+    }
+
+    private static void drawTableHeader(Canvas c,Paint p,int y){
+        p.setColor(NAVY);p.setStyle(Paint.Style.FILL);c.drawRect(36,y,576,y+24,p);
+        p.setColor(Color.WHITE);p.setTypeface(Typeface.DEFAULT_BOLD);p.setTextSize(8.5f);
+        c.drawText("DATE",43,y+16,p);c.drawText("TYPE / ESTATE",100,y+16,p);c.drawText("PURPOSE / DESCRIPTION",240,y+16,p);c.drawText("TIME",430,y+16,p);c.drawText("MILES",535,y+16,p);
+        p.setColor(GOLD);p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(1);c.drawRect(36,y,576,y+24,p);p.setStyle(Paint.Style.FILL);
+    }
+
+    private static void drawTripRow(Canvas c,Paint p,DatabaseHelper.Trip t,int y){
+        p.setColor(Color.rgb(225,228,235));p.setStrokeWidth(1);c.drawLine(36,y+27,576,y+27,p);
+        p.setColor(TEXT);p.setTypeface(Typeface.DEFAULT);p.setTextSize(8.2f);
+        c.drawText(s(t.date,15),43,y+17,p);
+        String type="ESTATE".equals(t.tripType)?("Estate • "+t.estateName):"Business";
+        c.drawText(s(type,25),100,y+17,p);
+        c.drawText(s(t.purpose,31),240,y+17,p);
+        c.drawText(s(t.startTime+"-"+t.endTime,20),430,y+17,p);
+        p.setTypeface(Typeface.DEFAULT_BOLD);p.setColor(NAVY);c.drawText(fmt(t.miles),535,y+17,p);
+        if(t.startOdometer>0||t.endOdometer>0){
+            p.setTypeface(Typeface.DEFAULT);p.setColor(Color.DKGRAY);p.setTextSize(6.8f);
+            String odo="Odo "+(t.startOdometer>0?String.format(Locale.US,"%.0f",t.startOdometer):"—")+" → "+(t.endOdometer>0?String.format(Locale.US,"%.0f",t.endOdometer):"—");
+            c.drawText(odo,240,y+26,p);
+        }
+    }
+
+    private static void drawFooter(Canvas c,Paint p,int page){
+        p.setColor(GOLD);p.setStrokeWidth(1);c.drawLine(36,744,576,744,p);
+        p.setTypeface(Typeface.DEFAULT);p.setTextSize(9);p.setColor(NAVY);
+        c.drawText("Helping Families Through Life's Transitions.",36,762,p);
+        p.setColor(Color.DKGRAY);p.setTextAlign(Paint.Align.RIGHT);
+        c.drawText("Bailey Ann's Estate Solutions LLC   •   Page "+page,576,762,p);
+        p.setTextAlign(Paint.Align.LEFT);
+    }
+
+    public static void print(Context c,File file,int year){
+        PrintManager pm=(PrintManager)c.getSystemService(Context.PRINT_SERVICE);
+        pm.print("Bailey Ann's Miles Tracker Report "+year,new FileAdapter(file),new PrintAttributes.Builder().setMediaSize(PrintAttributes.MediaSize.NA_LETTER).build());
+    }
+
+    private static class FileAdapter extends PrintDocumentAdapter{
+        private final File file;
+        FileAdapter(File f){file=f;}
+        @Override public void onLayout(PrintAttributes oldA,PrintAttributes newA,android.os.CancellationSignal cs,LayoutResultCallback cb,android.os.Bundle extras){cb.onLayoutFinished(new PrintDocumentInfo.Builder(file.getName()).setContentType(PrintDocumentInfo.CONTENT_TYPE_DOCUMENT).build(),true);}
+        @Override public void onWrite(android.print.PageRange[] pages,ParcelFileDescriptor dest,android.os.CancellationSignal cs,WriteResultCallback cb){try(FileInputStream in=new FileInputStream(file);FileOutputStream out=new FileOutputStream(dest.getFileDescriptor())){byte[] b=new byte[8192];int n;while((n=in.read(b))>0)out.write(b,0,n);cb.onWriteFinished(new android.print.PageRange[]{android.print.PageRange.ALL_PAGES});}catch(Exception e){cb.onWriteFailed(e.getMessage());}}
+    }
+
+    private static String fmt(double v){return String.format(Locale.US,"%.1f",v);}
+    private static String s(String x,int max){if(x==null)return "";return x.length()<=max?x:x.substring(0,Math.max(1,max-1))+"…";}
+    private YearEndReport(){}
 }
