@@ -47,9 +47,16 @@ jobs:
         shell: bash
         run: |
           mkdir -p app/src/main/res/drawable-nodpi
+          cat brand_assets/ba_l2_transparent_parts/part*.txt | tr -d '\n' | base64 -d > app/src/main/res/drawable-nodpi/ba_l2_shiny_gold_logo.webp
           base64 -d brand_assets/ba_i1_navy_gold_app_icon.b64 > app/src/main/res/drawable-nodpi/ba_i1_navy_gold_app_icon.webp
           test -s app/src/main/res/drawable-nodpi/ba_l2_shiny_gold_logo.webp
           test -s app/src/main/res/drawable-nodpi/ba_i1_navy_gold_app_icon.webp
+
+      - name: Verify transparent BA-L2 logo bytes
+        shell: bash
+        run: |
+          test "$(wc -c < app/src/main/res/drawable-nodpi/ba_l2_shiny_gold_logo.webp)" -eq 37160
+          sha256sum app/src/main/res/drawable-nodpi/ba_l2_shiny_gold_logo.webp
 
       - name: Apply approved Miles Tracker update
         shell: bash
